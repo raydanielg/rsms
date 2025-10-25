@@ -12,12 +12,17 @@
     </header>
 
     <!-- Hero Section -->
-    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 text-center">
-      <h2 class="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
+    <main class="relative bg-gray-900 py-20 sm:py-24 text-white text-center overflow-hidden">
+      <div class="absolute inset-0 z-0">
+        <img src="/hero-background.jpg" alt="Background" class="h-full w-full object-cover">
+        <div class="absolute inset-0 bg-black/50"></div>
+      </div>
+      <div class="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl">
         <span class="block">Mfumo wa Kisasa wa Usimamizi wa Shule</span>
         <span class="block text-green-600">Rahisi. Haraka. Madhubuti.</span>
       </h2>
-      <p class="mt-6 max-w-2xl mx-auto text-lg text-gray-600">
+      <p class="mt-6 max-w-2xl mx-auto text-lg text-gray-300">
         RSMS (Result Slip Management System) ni suluhisho la kidijitali linalorahisisha usimamizi wa taarifa za wanafunzi, alama, na matokeo, likiwawezesha walimu na wazazi kufuatilia maendeleo kwa urahisi.
       </p>
       <div class="mt-8">
@@ -25,6 +30,7 @@
           Anza Sasa (Bure)
         </Link>
       </div>
+    </div>
     </main>
 
     <!-- Features Section -->

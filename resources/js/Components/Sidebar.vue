@@ -50,9 +50,10 @@ const menu = [
   },
   {
     label: 'Timetables Management', icon: 'calendar', children: [
-      { label: 'All Timetables' },
-      { label: 'Create Timetable' },
-      { label: 'Sitting Plan' },
+      { label: 'Class Timetables', route: 'timetables.class.index' },
+      { label: 'All Timetables', route: 'timetables.index' },
+      { label: 'Create Timetable', route: 'timetables.create' },
+      { label: 'Sitting Plan', route: 'timetables.sitting' },
     ]
   },
 ];

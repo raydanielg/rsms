@@ -13,11 +13,126 @@ use App\Http\Controllers\ResultsController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\TeachersController;
+use App\Http\Controllers\TimetablesController;
 use App\Models\Exam;
 
 Route::get('/', function () {
     return Inertia::render('Home');
 });
+
+// Public: About Us page
+Route::inertia('/about', 'About')->name('about');
+
+// Public: Contact Us page
+Route::inertia('/contact', 'Contact')->name('contact');
+
+// Public: Track student page
+Route::inertia('/track', 'Results/Track')->name('public.track');
+
+// Public API: Student search (AJAX suggestions)
+Route::get('/api/public/students/search', function () {
+    $q = trim((string)request()->query('query', ''));
+    if ($q === '') return response()->json([]);
+    $rows = DB::table('students as s')
+        ->leftJoin('classes as c', 'c.name', '=', 's.class_name')
+        ->leftJoin('users as u', 'u.school_number', '=', 'c.school_number')
+        ->where(function($w) use ($q) {
+            $w->where('s.name', 'like', "%$q%")
+              ->orWhere('s.reg_no', 'like', "%$q%");
+        })
+        ->orderBy('s.name')
+        ->limit(10)
+        ->get(['s.id','s.name','s.reg_no','s.class_name','s.sex','u.school_name','u.school_number']);
+    return response()->json($rows);
+})->name('api.public.students.search');
+
+// Public API: Student details
+Route::get('/api/public/students/{id}', function (int $id) {
+    $row = DB::table('students as s')
+        ->leftJoin('classes as c', 'c.name', '=', 's.class_name')
+        ->leftJoin('users as u', 'u.school_number', '=', 'c.school_number')
+        ->where('s.id', $id)
+        ->first(['s.id','s.name','s.reg_no','s.class_name','s.sex','u.school_name','u.school_number']);
+    if (!$row) return response()->json([], 404);
+    return response()->json($row);
+})->name('api.public.students.show');
+
+// Public API: Contact form submissions (best-effort store)
+Route::post('/api/public/contact', function () {
+    $data = request()->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'nullable|email|max:255',
+        'phone' => 'nullable|string|max:50',
+        'message' => 'required|string|max:5000',
+    ]);
+    if (\Illuminate\Support\Facades\Schema::hasTable('feedback')) {
+        DB::table('feedback')->insert([
+            'name' => $data['name'],
+            'email' => $data['email'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'message' => $data['message'],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+    return response()->json(['ok' => true]);
+})->name('api.public.contact');
+
+// Public API: Student results (by exams)
+Route::get('/api/public/students/{id}/results', function (int $id) {
+    $rows = DB::table('exam_marks as m')
+        ->join('exams as e', 'e.id', '=', 'm.exam_id')
+        ->join('subjects as sub', 'sub.id', '=', 'm.subject_id')
+        ->where('m.student_id', $id)
+        ->orderByDesc('e.year')->orderByDesc('e.term')->orderByDesc('e.id')
+        ->get(['e.id as exam_id','e.name as exam_name','e.type','e.year','e.term','sub.code','sub.name as subject_name','m.marks']);
+
+    $byExam = [];
+    foreach ($rows as $r) {
+        $exid = $r->exam_id;
+        if (!isset($byExam[$exid])) {
+            $byExam[$exid] = [
+                'id' => $r->exam_id,
+                'name' => $r->exam_name,
+                'type' => $r->type,
+                'year' => $r->year,
+                'term' => $r->term,
+                'subjects' => [],
+                'total' => 0,
+                'count' => 0,
+            ];
+        }
+        $m = (int)($r->marks ?? 0);
+        $grade = $m >= 75 ? 'A' : ($m >= 65 ? 'B' : ($m >= 55 ? 'C' : ($m >= 40 ? 'D' : 'F')));
+        $byExam[$exid]['subjects'][] = [ 'code' => $r->code ?: $r->subject_name, 'name' => $r->subject_name, 'marks' => $m, 'grade' => $grade ];
+        $byExam[$exid]['total'] += $m;
+        $byExam[$exid]['count'] += 1;
+    }
+
+    $exams = [];
+    foreach ($byExam as $ex) {
+        $avg = $ex['count'] ? round($ex['total'] / $ex['count']) : 0;
+        $div = $avg >= 75 ? 'I' : ($avg >= 65 ? 'II' : ($avg >= 55 ? 'III' : ($avg >= 40 ? 'IV' : '0')));
+        $ex['aggregate'] = $avg;
+        $ex['division'] = $div;
+        unset($ex['total'],$ex['count']);
+        $exams[] = $ex;
+    }
+
+    // Sort exams newest first already applied in query ordering
+    return response()->json([ 'exams' => $exams ]);
+})->name('api.public.students.results');
+
+// Public API: Student behaviours (best-effort; guarded by table existence)
+Route::get('/api/public/students/{id}/behaviours', function (int $id) {
+    if (\Illuminate\Support\Facades\Schema::hasTable('behaviours')) {
+        $rows = DB::table('behaviours')->where('student_id', $id)
+            ->orderByDesc('id')->limit(10)
+            ->get(['id','type','note','created_at']);
+        return response()->json($rows);
+    }
+    return response()->json([]);
+})->name('api.public.students.behaviours');
 
 // Public API: Classes assigned to an exam for a specific school
 Route::get('/api/public/schools/{id}/exams/{examId}/classes', function ($id, int $examId) {
@@ -305,7 +420,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/information/updates/{id}/react', [InformationController::class, 'reactUpdate'])->name('information.updates.react');
 
     // Timetables
-    Route::inertia('/timetables', 'Timetables/Index')->name('timetables.index');
+    Route::get('/timetables', [TimetablesController::class, 'index'])->name('timetables.index');
+    Route::get('/timetables/class', [TimetablesController::class, 'classIndex'])->name('timetables.class.index');
+    Route::post('/timetables', [TimetablesController::class, 'store'])->name('timetables.store');
     Route::inertia('/timetables/create', 'Timetables/Create')->name('timetables.create');
     Route::inertia('/timetables/sitting-plan', 'Timetables/SittingPlan')->name('timetables.sitting');
 

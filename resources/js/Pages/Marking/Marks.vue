@@ -17,6 +17,7 @@ const savedKeys = ref(new Set());
 const savingKeys = ref(new Set());
 const debounceTimers = new Map();
 const dirtyKeys = ref(new Set());
+const autoSave = ref(true);
 let lastFocused = { studentId: null, subjectId: null };
 
 function getCsrfToken() {
@@ -26,6 +27,8 @@ function getCsrfToken() {
   const m = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/);
   return m ? decodeURIComponent(m[1]) : '';
 }
+
+// (removed custom arrow adjust to use native spinner/arrow behavior)
 
 function scheduleSave(studentId, subjectId, delay = 0) {
   const k = keyFor(studentId, subjectId);
@@ -64,7 +67,7 @@ async function loadClass(clsId) {
   selectedClassId.value = clsId;
   loading.value = true;
   try {
-    const url = route('results.exams.marks', { examId: props.exam.id, class_id: clsId });
+    const url = `/results/exams/${props.exam.id}/marks?class_id=${encodeURIComponent(clsId)}`;
     const res = await fetch(url, {
       method: 'GET',
       headers: {
@@ -88,9 +91,7 @@ async function saveSingle(studentId, subjectId) {
   const body = { class_name: selectedClassName.value, entries: [ { student_id: studentId, subject_id: subjectId, marks: val === '' ? null : val } ] };
   try {
     savingKeys.value.add(k);
-    let url = route('results.exams.marks.save', { examId: props.exam.id });
-    // Force same-origin relative path to avoid cross-origin/Vite issues
-    if (url.startsWith(window.location.origin)) url = url.substring(window.location.origin.length);
+    const url = `/results/exams/${props.exam.id}/marks`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': getCsrfToken() },
@@ -104,7 +105,7 @@ async function saveSingle(studentId, subjectId) {
     dirtyKeys.value.delete(k);
     return true;
   } catch (e) {
-    window.__toast && window.__toast('error','Failed to auto-save');
+    if (window.__toast) window.__toast('error','Failed to auto-save'); else alert('Failed to auto-save');
     return false;
   }
   finally {
@@ -221,10 +222,38 @@ function onCellFocus(siRow, subjectId, ev) {
   ev.target.select && ev.target.select();
 }
 
-function onArrowNav(siRow, subjectId, key) {
-  const delta = key === 'ArrowDown' ? 1 : -1;
+function onPaste(siRow, siSubject, ev) {
+  const text = ev.clipboardData && ev.clipboardData.getData('text');
+  if (!text) return;
+  ev.preventDefault();
+  // Split rows by newline and columns by tab or comma
+  const rows = text.split(/\r?\n/).filter(Boolean);
+  for (let r = 0; r < rows.length && (siRow + r) < students.value.length; r++) {
+    const cols = rows[r].split(/\t|,/);
+    for (let c = 0; c < cols.length && (siSubject + c) < subjects.value.length; c++) {
+      const s = students.value[siRow + r];
+      const sub = subjects.value[siSubject + c];
+      let v = cols[c].trim();
+      if (v === '') continue;
+      let num = Number(v);
+      if (Number.isNaN(num)) continue;
+      if (num < 0) num = 0;
+      if (num > 100) num = 100;
+      marks.value[keyFor(s.id, sub.id)] = num;
+      dirtyKeys.value.add(keyFor(s.id, sub.id));
+      if (autoSave.value) scheduleSave(s.id, sub.id, 150);
+    }
+  }
+}
+
+function onTabVertical(siRow, subjectId, direction) {
+  // Save current cell, then move vertically in same subject
+  const currentStudent = students.value[siRow];
+  if (currentStudent) {
+    saveSingle(currentStudent.id, subjectId);
+  }
+  const delta = direction === 'up' ? -1 : 1;
   const target = Math.min(Math.max(siRow + delta, 0), students.value.length - 1);
-  if (target === siRow) return;
   const nextStudent = students.value[target];
   if (nextStudent) {
     const id = getInputId(nextStudent.id, subjectId);
@@ -321,6 +350,14 @@ function getInputId(studentId, subjectId) {
   return `mark-s${studentId}-p${subjectId}`;
 }
 
+function maybeAutoSave(studentId, subjectId) {
+  if (autoSave.value) {
+    saveSingle(studentId, subjectId);
+  }
+}
+
+// (removed key filters to allow native number input behavior)
+
 function onInputMark(studentId, subjectId, ev) {
   const v = ev.target.value;
   if (v === '' || v === null) {
@@ -367,7 +404,7 @@ async function saveAll() {
         }
       }
     }
-    const res = await fetch(route('results.exams.marks.save', { examId: props.exam.id }), {
+    const res = await fetch(`/results/exams/${props.exam.id}/marks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -377,12 +414,12 @@ async function saveAll() {
       body: JSON.stringify({ class_name: selectedClassName.value, entries })
     });
     if (res.ok) {
-      window.__toast && window.__toast('success','Marks saved');
+      if (window.__toast) window.__toast('success','Marks saved'); else alert('Marks saved');
     } else {
-      window.__toast && window.__toast('error','Failed to save');
+      if (window.__toast) window.__toast('error','Failed to save'); else alert('Failed to save');
     }
   } catch (e) {
-    window.__toast && window.__toast('error','Failed to save');
+    if (window.__toast) window.__toast('error','Failed to save'); else alert('Failed to save');
   } finally {
     saving.value = false;
   }
@@ -421,7 +458,15 @@ async function saveAll() {
       <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
         <div class="mb-3 flex items-center justify-between">
           <div class="text-sm font-medium text-gray-700">Students</div>
-          <div class="text-xs text-gray-500">{{ students.length }} total</div>
+          <div class="flex items-center gap-3">
+            <div class="text-xs text-gray-500">{{ students.length }} total</div>
+            <span v-if="hasInvalid" class="text-xs font-medium text-rose-700">Fix invalid marks first</span>
+            <button type="button" @click="saveAll" :disabled="saving || hasInvalid"
+                    class="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60">
+              <svg v-if="saving" class="mr-1.5 h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="2" opacity="0.25"/><path d="M21 12a9 9 0 0 1-9 9" stroke-width="2"/></svg>
+              Save All
+            </button>
+          </div>
         </div>
         <div v-if="loading" class="text-sm text-gray-500">Loading...</div>
         <div v-else>
@@ -449,17 +494,20 @@ async function saveAll() {
                   <td v-for="(sub, si) in subjects" :key="sub.id" class="px-2 py-1 text-center border-t border-r border-gray-200">
                     <div class="relative inline-block">
                       <input
-                        type="text"
+                        type="number"
                         inputmode="numeric"
                         min="0"
                         max="100"
                         step="1"
                         :value="marks[keyFor(s.id, sub.id)] ?? ''"
-                        placeholder="-"
+                        placeholder=""
                         @input="onInputMark(s.id, sub.id, $event)"
-                        @change="saveSingle(s.id, sub.id)"
-                        @blur="saveSingle(s.id, sub.id)"
-                        @keydown="(e) => onCellKey(e, siRow, si)"
+                        @change="maybeAutoSave(s.id, sub.id)"
+                        @blur="maybeAutoSave(s.id, sub.id)"
+                        @keydown.enter.prevent="onTabVertical(siRow, sub.id, 'down')"
+                        @keydown.tab.prevent="onTabVertical(siRow, sub.id, 'down')"
+                        @keydown.shift.tab.prevent="onTabVertical(siRow, sub.id, 'up')"
+                        @paste="onPaste(siRow, si, $event)"
                         @focus="onCellFocus(siRow, sub.id, $event)"
                       :data-student="s.id"
                       :data-subject="sub.id"
@@ -498,9 +546,4 @@ async function saveAll() {
 </template>
 
 <style scoped>
-/* Hide number input spinners (Chrome, Safari, Edge, Opera) */
-.marks-cell::-webkit-outer-spin-button,
-.marks-cell::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-/* Hide number input spinners (Firefox) */
-.marks-cell { -moz-appearance: textfield; appearance: textfield; }
 </style>

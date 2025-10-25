@@ -14,15 +14,18 @@
         <Link href="/results/schools" :class="['px-1.5 py-1 transition', isActive('/results/schools') ? 'text-green-700 border-b-2 border-green-600' : 'hover:text-green-700 border-b-2 border-transparent']">Results</Link>
         <Link href="/track" :class="['px-1.5 py-1 transition', isActive('/track') ? 'text-green-700 border-b-2 border-green-600' : 'hover:text-green-700 border-b-2 border-transparent']">Track</Link>
         <Link href="/about" :class="['px-1.5 py-1 transition', isActive('/about') ? 'text-green-700 border-b-2 border-green-600' : 'hover:text-green-700 border-b-2 border-transparent']">About</Link>
-        <Link href="/contact" :class="['px-1.5 py-1 transition', isActive('/contact') ? 'text-green-700 border-b-2 border-green-600' : 'hover:text-green-700 border-b-2 border-transparent']">Contact Us</Link>
+        <Link href="/contact" :class="['px-1.5 py-1 transition', isActive('/contact') ? 'text-green-700 border-b-2 border-green-600' : 'hover:text-green-700 border-b-2 border-transparent']">Contact</Link>
       </nav>
 
       <!-- Actions (end) -->
       <div class="col-span-4 hidden sm:flex items-center justify-end gap-3">
-        <Link :href="route('login')" class="text-gray-700 hover:text-green-700 font-medium">Login</Link>
-        <Link :href="route('register')" class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition">
-          Start Now
-        </Link>
+        <template v-if="hasUser">
+          <Link :href="route('dashboard')" class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition">Dashboard</Link>
+        </template>
+        <template v-else>
+          <Link :href="route('login')" class="text-gray-700 hover:text-green-700 font-medium">Login</Link>
+          <Link :href="route('register')" class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition">Start Now</Link>
+        </template>
       </div>
 
       <!-- Mobile menu button (end on small) -->
@@ -41,11 +44,16 @@
           <Link href="/results/schools" class="py-2 text-gray-700 hover:text-green-700">Results</Link>
           <Link href="/track" class="py-2 text-gray-700 hover:text-green-700">Track</Link>
           <Link href="/about" class="py-2 text-gray-700 hover:text-green-700">About</Link>
-          <Link href="/contact" class="py-2 text-gray-700 hover:text-green-700">Contact Us</Link>
+          <Link href="/contact" class="py-2 text-gray-700 hover:text-green-700">Contact</Link>
         </div>
         <div class="pt-3 flex items-center gap-3">
-          <Link :href="route('login')" class="text-gray-700 hover:text-green-700 font-medium">Login</Link>
-          <Link :href="route('register')" class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition">Start Now</Link>
+          <template v-if="hasUser">
+            <Link :href="route('dashboard')" class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition">Dashboard</Link>
+          </template>
+          <template v-else>
+            <Link :href="route('login')" class="text-gray-700 hover:text-green-700 font-medium">Login</Link>
+            <Link :href="route('register')" class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition">Start Now</Link>
+          </template>
         </div>
       </div>
     </div>
@@ -58,6 +66,7 @@ import { ref, computed } from 'vue'
 const open = ref(false)
 const page = usePage()
 const currentPath = computed(() => page.url || '/')
+const hasUser = computed(() => !!(page.props && page.props.auth && page.props.auth.user))
 function isActive(href) {
   if (href === '/' ) return currentPath.value === '/'
   return currentPath.value === href || currentPath.value.startsWith(href + '/')

@@ -15,9 +15,7 @@ use App\Http\Controllers\TeachersController;
 use App\Models\Exam;
 
 Route::get('/', function () {
-    return auth()->check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+    return Inertia::render('Home');
 });
 
 Route::get('/dashboard', function () {

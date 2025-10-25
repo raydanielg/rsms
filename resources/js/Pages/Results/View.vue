@@ -98,7 +98,7 @@
           <tbody class="divide-y divide-gray-100">
             <tr v-for="s in students" :key="s.reg_no" class="hover:bg-slate-50">
               <td class="px-3 py-2 text-slate-900 whitespace-nowrap">{{ s.reg_no }}</td>
-              <td class="px-3 py-2 text-slate-900">{{ s.name }}</td>
+              <td class="px-3 py-2 text-slate-900">{{ s.name || s.student_name || '—' }}</td>
               <td class="px-3 py-2 text-slate-800">{{ s.sex }}</td>
               <td v-for="code in subjectCodes" :key="code" class="px-3 py-2 text-center text-slate-800">{{ markFor(s, code) }}</td>
               <td class="px-3 py-2 text-center text-slate-800">{{ totalFor(s) }}</td>

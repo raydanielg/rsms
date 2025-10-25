@@ -5,12 +5,23 @@ import { Head, Link, router } from '@inertiajs/vue3';
 
 const props = defineProps({
   teachers: { type: Object, required: true },
-  filters: { type: Object, default: () => ({ q: '' }) },
+  filters: { type: Object, default: () => ({ q: '', from: '', to: '' }) },
 });
 
 const q = ref(props.filters.q || '');
+const from = ref(props.filters.from || '');
+const to = ref(props.filters.to || '');
 function applyFilters() {
-  router.get(route('teachers.index'), { q: q.value }, { preserveState: true, replace: true });
+  router.get(
+    route('teachers.index'),
+    { q: q.value, from: from.value, to: to.value },
+    { preserveState: true, replace: true }
+  );
+}
+function exportPdf() {
+  const params = new URLSearchParams({ q: q.value || '', from: from.value || '', to: to.value || '', export: 'pdf' }).toString();
+  const url = route('teachers.index') + (route('teachers.index').includes('?') ? '&' : '?') + params;
+  window.open(url, '_blank');
 }
 
 // Add modal state
@@ -28,28 +39,37 @@ const canSave = computed(() => {
   );
 });
 
-// Typeahead for classes/subjects
-const classQuery = ref('');
+// Data sources for selects
 const classOpts = ref([]);
-const classIds = ref([]); // selected class ids
-const subjQuery = ref('');
+const classIds = ref([]); // will contain at most one id
 const subjOpts = ref([]);
-const showClassDd = ref(false);
-const showSubjDd = ref(false);
 let classTimer, subjTimer;
-function fetchClasses() {
-  clearTimeout(classTimer);
-  classTimer = setTimeout(async () => {
-    const res = await fetch(route('classes.search', { q: classQuery.value }), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-    classOpts.value = res.ok ? await res.json() : [];
-  }, 250);
+async function fetchClasses() {
+  // Load all/first page classes for the select (no typeahead)
+  const res = await fetch(route('classes.search', { q: '' }), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+  classOpts.value = res.ok ? await res.json() : [];
 }
-function fetchSubjects() {
-  clearTimeout(subjTimer);
-  subjTimer = setTimeout(async () => {
-    const res = await fetch(route('subjects.search', { q: subjQuery.value }), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-    subjOpts.value = res.ok ? await res.json() : [];
-  }, 250);
+async function fetchSubjects() {
+  // Load subjects for the selected class id (if any)
+  if (Array.isArray(classIds.value) && classIds.value.length > 0) {
+    const id = classIds.value[0];
+    const r = await fetch(route('classes.subjects', { id }), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    if (r.ok) {
+      const data = await r.json();
+      const arr = Array.isArray(data) ? data : (Array.isArray(data?.subjects) ? data.subjects : []);
+      // Deduplicate by id
+      const map = new Map();
+      for (const s of arr) { if (s && s.id != null) map.set(s.id, s); }
+      subjOpts.value = Array.from(map.values());
+    } else {
+      subjOpts.value = [];
+    }
+  } else {
+    subjOpts.value = [];
+  }
+  // Prune selected subjects that are no longer available
+  const allowedIds = new Set(subjOpts.value.map(s => s.id));
+  add.value.subjects = (add.value.subjects || []).filter(s => allowedIds.has(s.id));
 }
 function toggleSelect(listRef, item) {
   const idx = listRef.value.findIndex(x => x.id === item.id);
@@ -60,12 +80,18 @@ function removeFrom(listRef, id) {
   if (idx !== -1) listRef.value.splice(idx, 1);
 }
 function syncAddClassesFromIds() {
-  add.value.classes = classIds.value.map(id => ({ id, name: (classOpts.value.find(c => c.id === id)?.name) || `#${id}` }));
+  add.value.classes = classIds.value.slice(0,1).map(id => ({ id, name: (classOpts.value.find(c => c.id === id)?.name) || `#${id}` }));
 }
 function onClassesChange(e) {
-  const ids = Array.from(e.target.selectedOptions).map(o => Number(o.value));
-  classIds.value = ids;
+  const id = Number(e.target.value || 0);
+  classIds.value = isNaN(id) || id === 0 ? [] : [id];
   syncAddClassesFromIds();
+  fetchSubjects();
+}
+function onSubjectsChange(e) {
+  const ids = Array.from(e.target.selectedOptions).map(o => Number(o.value));
+  const map = new Map(subjOpts.value.map(s => [s.id, s]));
+  add.value.subjects = ids.map(id => map.get(id)).filter(Boolean);
 }
 async function saveTeacher() {
   saving.value = true;
@@ -88,14 +114,11 @@ async function saveTeacher() {
 
 watch(showAdd, (v) => {
   if (v) {
-    classQuery.value = '';
-    subjQuery.value = '';
     fetchClasses();
-    fetchSubjects();
-    showClassDd.value = true;
-    showSubjDd.value = true;
     classIds.value = [];
     add.value.classes = [];
+    subjOpts.value = [];
+    add.value.subjects = [];
   }
 });
 
@@ -112,7 +135,7 @@ async function openEye(t) {
   } finally { eyeLoading.value = false; }
 }
 
-function subjLabel(s) { return s.code || s.name; }
+function subjLabel(s) { return s?.name || ''; }
 </script>
 
 <template>
@@ -121,14 +144,25 @@ function subjLabel(s) { return s.code || s.name; }
     <template #header>
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-semibold leading-tight text-gray-800">Teachers</h2>
-        <button @click="showAdd = true" class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700">Add Teacher</button>
       </div>
     </template>
 
     <div class="space-y-4">
-      <div class="flex items-center gap-2">
-        <input v-model="q" @keyup.enter="applyFilters" type="text" placeholder="Search name / check no / phone" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-        <button @click="applyFilters" class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Filter</button>
+      <!-- Toolbar: search + date filters + export + add -->
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div class="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+          <input v-model="q" @keyup.enter="applyFilters" type="text" placeholder="Search name / check no / phone" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+          <input v-model="from" type="date" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+          <input v-model="to" type="date" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <button @click="applyFilters" class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Filter</button>
+          <button @click="exportPdf" class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <svg class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m0 0l-4-4m4 4l4-4M4 7v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3"/></svg>
+            Export PDF
+          </button>
+          <button @click="showAdd = true" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Add Teacher</button>
+        </div>
       </div>
 
       <div class="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
@@ -222,47 +256,16 @@ function subjLabel(s) { return s.code || s.name; }
         <div class="grid gap-4 p-5 pt-0 sm:grid-cols-2">
           <div>
             <label class="text-xs text-gray-500">Classes <span class="text-rose-600">*</span></label>
-            <div class="mt-1">
-              <input v-model="classQuery" @input="fetchClasses" placeholder="Search classes" class="mb-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-              <select multiple size="6" @change="onClassesChange" class="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                <option v-for="c in classOpts" :key="c.id" :value="c.id" :selected="classIds.includes(c.id)">{{ c.name }} (ID: {{ c.id }})</option>
-              </select>
-              <div class="mt-1 text-[11px] text-gray-500">Hold Ctrl/Cmd to select multiple.</div>
-            </div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span v-for="c in add.classes" :key="c.id" class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                {{ c.name }} (ID: {{ c.id }})
-                <button @click.stop="removeFrom(add.classes, c.id); classIds = classIds.filter(x=>x!==c.id)" class="text-emerald-700/70 hover:text-emerald-900" aria-label="Remove">×</button>
-              </span>
-            </div>
+            <select class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" @change="onClassesChange">
+              <option value="">Select class...</option>
+              <option v-for="c in classOpts" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
           </div>
-          <div class="relative">
+          <div>
             <label class="text-xs text-gray-500">Subjects <span class="text-rose-600">*</span></label>
-            <div class="mt-1 flex items-center gap-2">
-              <input v-model="subjQuery" @focus="showSubjDd = true; fetchSubjects()" @input="fetchSubjects" placeholder="Search subjects" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
-              <button type="button" @click="showSubjDd = !showSubjDd; if (showSubjDd) fetchSubjects();" class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50" aria-label="Toggle subjects">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
-              </button>
-            </div>
-            <div v-show="showSubjDd" class="absolute z-10 mt-1 w-full max-h-52 overflow-auto rounded-md border border-gray-200 bg-white shadow">
-              <div class="sticky top-0 z-10 flex items-center justify-between bg-white/90 px-3 py-1 text-xs text-gray-500">
-                <span>Found {{ subjOpts.length }}</span>
-                <span>Selected {{ add.subjects.length }}</span>
-              </div>
-              <div v-for="s in subjOpts" :key="s.id" @click="toggleSelect(add.subjects, s)" :class="['flex cursor-pointer items-center justify-between px-3 py-2 hover:bg-indigo-50', add.subjects.some(x=>x.id===s.id) ? 'bg-indigo-50/60 ring-1 ring-indigo-200' : '']">
-                <div :class="['text-sm', add.subjects.some(x=>x.id===s.id) ? 'font-semibold text-indigo-700' : 'text-gray-800']">{{ subjLabel(s) }}</div>
-                <div class="flex items-center gap-2">
-                  <span v-if="add.subjects.some(x=>x.id===s.id)" class="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-medium text-indigo-700">Selected</span>
-                  <svg v-if="add.subjects.some(x=>x.id===s.id)" class="h-4 w-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                </div>
-              </div>
-              <div v-if="subjOpts.length===0" class="px-3 py-2 text-xs text-gray-500">No matches</div>
-            </div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span v-for="s in add.subjects" :key="s.id" class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200">{{ subjLabel(s) }}
-                <button @click.stop="removeFrom(add.subjects, s.id)" class="text-indigo-700/70 hover:text-indigo-900" aria-label="Remove">×</button>
-              </span>
-            </div>
+            <select multiple size="8" class="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" @change="onSubjectsChange">
+              <option v-for="s in subjOpts" :key="s.id" :value="s.id">{{ subjLabel(s) }}</option>
+            </select>
           </div>
         </div>
         <div class="flex items-center justify-end gap-2 border-t px-5 py-3">

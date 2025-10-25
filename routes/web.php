@@ -363,6 +363,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/subjects/{id}', [SubjectsController::class, 'update'])->name('subjects.update');
     Route::delete('/subjects/{id}', [SubjectsController::class, 'destroy'])->name('subjects.destroy');
 
+    // Teacher-focused exam view
+    Route::get('/teachers/{id}/exam/{examId}', [TeachersController::class, 'exam'])->name('teachers.exam');
+
     // Teachers
     Route::get('/teachers', [TeachersController::class, 'index'])->name('teachers.index');
     Route::post('/teachers', [TeachersController::class, 'store'])->name('teachers.store');

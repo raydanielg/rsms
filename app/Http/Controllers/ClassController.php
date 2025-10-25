@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class ClassController extends Controller
 {
@@ -34,21 +35,15 @@ class ClassController extends Controller
     {
         $q = trim((string) $request->query('q', ''));
         $schoolNumber = optional($request->user())->school_number;
+        // Return one row per name (dedupe visually), pick the smallest id for the option value
         $items = SchoolClass::query()
-            ->when($schoolNumber, function($w) use ($schoolNumber) {
-                $w->whereExists(function($sq) use ($schoolNumber) {
-                    $sq->select(DB::raw(1))
-                        ->from('students as s')
-                        ->whereColumn('s.class_name', 'classes.name')
-                        ->where('s.exam_no', 'like', $schoolNumber.'-%');
-                });
-            })
-            ->when($q !== '', function($w) use ($q) {
-                $w->where('name', 'like', "%$q%");
-            })
+            ->when($schoolNumber, fn($w) => $w->where('school_number', $schoolNumber))
+            ->when($q !== '', fn($w) => $w->where('name', 'like', "%$q%"))
+            ->selectRaw('MIN(id) as id, name')
+            ->groupBy('name')
             ->orderBy('name')
-            ->limit(8)
-            ->get(['id','name']);
+            ->limit(50)
+            ->get();
         return response()->json($items);
     }
 
@@ -59,14 +54,7 @@ class ClassController extends Controller
         $schoolNumber = optional($request->user())->school_number;
         $base = SchoolClass::query()
             ->with('subjects:id,name,code')
-            ->when($schoolNumber, function($w) use ($schoolNumber) {
-                $w->whereExists(function($sq) use ($schoolNumber) {
-                    $sq->select(DB::raw(1))
-                        ->from('students as s')
-                        ->whereColumn('s.class_name', 'classes.name')
-                        ->where('s.exam_no', 'like', $schoolNumber.'-%');
-                });
-            });
+            ->when($schoolNumber, fn($w) => $w->where('school_number', $schoolNumber));
         if ($id) {
             $cls = $base->where('id', $id)->firstOrFail();
         } else {
@@ -79,13 +67,20 @@ class ClassController extends Controller
     public function store(Request $request)
     {
         $schoolNumber = optional($request->user())->school_number;
+        $normalizedName = trim($request->input('name', ''));
         $data = $request->validate([
-            'name' => ['required','string','max:255','unique:classes,name,NULL,id,school_number,'.$schoolNumber],
+            'name' => [
+                'required','string','max:255',
+                Rule::unique('classes', 'name')->where(fn($q) => $q->where('school_number', $schoolNumber)),
+            ],
             'subject_ids' => ['array'],
             'subject_ids.*' => ['integer','exists:subjects,id'],
         ]);
-        DB::transaction(function () use ($data, $schoolNumber) {
-            $cls = SchoolClass::create(['name' => $data['name'], 'school_number' => $schoolNumber]);
+        DB::transaction(function () use ($data, $schoolNumber, $normalizedName) {
+            $cls = SchoolClass::firstOrCreate(
+                ['school_number' => $schoolNumber, 'name' => $normalizedName],
+                ['name' => $normalizedName]
+            );
             if (!empty($data['subject_ids'])) {
                 $cls->subjects()->sync($data['subject_ids']);
             }
@@ -96,13 +91,19 @@ class ClassController extends Controller
     public function update(Request $request, int $id)
     {
         $cls = SchoolClass::findOrFail($id);
+        $normalizedName = trim($request->input('name', ''));
         $data = $request->validate([
-            'name' => ['required','string','max:255','unique:classes,name,'.$cls->id.',id,school_number,'.$cls->school_number],
+            'name' => [
+                'required','string','max:255',
+                Rule::unique('classes', 'name')
+                    ->where(fn($q) => $q->where('school_number', $cls->school_number))
+                    ->ignore($cls->id),
+            ],
             'subject_ids' => ['array'],
             'subject_ids.*' => ['integer','exists:subjects,id'],
         ]);
-        DB::transaction(function () use ($cls, $data) {
-            $cls->update(['name' => $data['name']]);
+        DB::transaction(function () use ($cls, $data, $normalizedName) {
+            $cls->update(['name' => $normalizedName]);
             $cls->subjects()->sync($data['subject_ids'] ?? []);
         });
         return Redirect::back()->with('success', 'Class updated');
@@ -120,14 +121,7 @@ class ClassController extends Controller
         $schoolNumber = optional(request()->user())->school_number;
         $clsQuery = SchoolClass::query()
             ->with('subjects:id,name,code')
-            ->when($schoolNumber, function($w) use ($schoolNumber) {
-                $w->whereExists(function($sq) use ($schoolNumber) {
-                    $sq->select(DB::raw(1))
-                        ->from('students as s')
-                        ->whereColumn('s.class_name', 'classes.name')
-                        ->where('s.exam_no', 'like', $schoolNumber.'-%');
-                });
-            });
+            ->when($schoolNumber, fn($w) => $w->where('school_number', $schoolNumber));
         $cls = $clsQuery->findOrFail($id);
         $students = \App\Models\Student::where('class_name', $cls->name)
             ->orderBy('name')->get(['id','reg_no','name','sex','class_name']);

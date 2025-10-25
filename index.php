@@ -15,9 +15,12 @@ define('LARAVEL_START', microtime(true));
 */
 
 $candidates = [
-    dirname(__DIR__),                     // moja juu ya public_html
-    dirname(__DIR__) . '/rsms',           // au kwenye /rsms
-    '/home/amoleckc/rsms',                // path kamili kwenye cPanel
+    __DIR__,                               // project root is the current dir (common on cPanel addon domain)
+    dirname(__DIR__),                      // moja juu ya public_html
+    __DIR__ . '/rsms',                     // project inside subfolder under current dir
+    dirname(__DIR__) . '/rsms',            // au kwenye /rsms moja juu
+    '/home/amoleckc/rsms.amss.ac.tz',      // cPanel addon domain/docroot path
+    '/home/amoleckc/rsms',                 // path kamili kwenye cPanel
 ];
 
 $project_path = null;

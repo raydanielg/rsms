@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\SubjectsController;
@@ -17,6 +18,189 @@ use App\Models\Exam;
 Route::get('/', function () {
     return Inertia::render('Home');
 });
+
+// Public API: Classes assigned to an exam for a specific school
+Route::get('/api/public/schools/{id}/exams/{examId}/classes', function ($id, int $examId) {
+    $query = DB::table('exam_class as ec')
+        ->join('classes as c', 'c.id', '=', 'ec.school_class_id')
+        ->where('ec.exam_id', $examId)
+        ->where('c.school_number', $id)
+        ->orderBy('c.name')
+        ->selectRaw('TRIM(c.name) as name');
+
+    $rows = $query->pluck('name')->filter()->unique()->values();
+
+    // Fallback: if no classes match the school filter (e.g., school_number not set), return all classes for the exam
+    if ($rows->isEmpty()) {
+        $rows = DB::table('exam_class as ec')
+            ->join('classes as c', 'c.id', '=', 'ec.school_class_id')
+            ->where('ec.exam_id', $examId)
+            ->orderBy('c.name')
+            ->selectRaw('TRIM(c.name) as name')
+            ->pluck('name')->filter()->unique()->values();
+    }
+
+    return response()->json($rows);
+});
+
+// Public API: Computed results for a school's exam
+Route::get('/api/public/schools/{id}/exams/{examId}/results', function ($id, int $examId) {
+    $className = request()->query('class_name');
+    // School info
+    $school = DB::table('users')
+        ->where('school_number', $id)
+        ->orderBy('id')
+        ->first(['school_name','school_number','region']);
+
+    // Pull raw marks for this exam scoped to the school's classes
+    $rows = DB::table('exam_marks as m')
+        ->join('students as s', 's.id', '=', 'm.student_id')
+        ->join('subjects as sub', 'sub.id', '=', 'm.subject_id')
+        ->join('classes as c', 'c.name', '=', 'm.class_name')
+        ->where('m.exam_id', $examId)
+        ->where('c.school_number', $id);
+    if ($className) { $rows->where('c.name', $className); }
+    $rows = $rows->get(['s.id as student_id','s.reg_no','s.name as student_name','s.sex','sub.code as subject_code','sub.name as subject_name','m.marks']);
+
+    // Group by student
+    $byStudent = [];
+    foreach ($rows as $r) {
+        $sid = $r->student_id;
+        if (!isset($byStudent[$sid])) {
+            $byStudent[$sid] = [
+                'reg_no' => $r->reg_no,
+                'name' => $r->student_name,
+                'sex' => strtoupper((string)$r->sex),
+                'subjects' => [],
+                'total' => 0,
+                'count' => 0,
+            ];
+        }
+        $grade = null; // simple letter banding
+        $m = (int)($r->marks ?? 0);
+        if ($m >= 75) $grade = 'A'; elseif ($m >= 65) $grade = 'B'; elseif ($m >= 55) $grade = 'C'; elseif ($m >= 40) $grade = 'D'; else $grade = 'F';
+        $byStudent[$sid]['subjects'][] = [ 'code' => $r->subject_code ?: $r->subject_name, 'name' => $r->subject_name, 'grade' => $grade, 'marks' => $m ];
+        $byStudent[$sid]['total'] += $m;
+        $byStudent[$sid]['count'] += 1;
+    }
+
+    // Compute division via average thresholds (simple model)
+    $students = [];
+    $summary = [ 'F' => ['I'=>0,'II'=>0,'III'=>0,'IV'=>0,'0'=>0], 'M' => ['I'=>0,'II'=>0,'III'=>0,'IV'=>0,'0'=>0], 'T' => ['I'=>0,'II'=>0,'III'=>0,'IV'=>0,'0'=>0] ];
+    foreach ($byStudent as $sid => $st) {
+        $avg = $st['count'] ? $st['total'] / $st['count'] : 0;
+        $div = '0';
+        if ($avg >= 75) $div = 'I';
+        elseif ($avg >= 65) $div = 'II';
+        elseif ($avg >= 55) $div = 'III';
+        elseif ($avg >= 40) $div = 'IV';
+        else $div = '0';
+        $sex = in_array($st['sex'], ['F','M']) ? $st['sex'] : 'T';
+        $summary[$sex][$div] += 1;
+        $summary['T'][$div] += 1;
+        $students[] = [
+            'reg_no' => $st['reg_no'],
+            'name' => $st['name'],
+            'sex' => $st['sex'] ?: '-',
+            'aggregate' => round($avg),
+            'division' => $div,
+            'subjects' => $st['subjects'],
+        ];
+    }
+
+    // Sort students by reg_no or name
+    usort($students, function ($a,$b) { return strcmp($a['reg_no'], $b['reg_no']); });
+
+    // Get assigned classes for this exam/school
+    $assignedClasses = DB::table('exam_class as ec')
+        ->join('classes as c', 'c.id', '=', 'ec.school_class_id')
+        ->where('ec.exam_id', $examId)
+        ->where('c.school_number', $id)
+        ->orderBy('c.name')
+        ->pluck('c.name');
+
+    return response()->json([
+        'school' => $school,
+        'classes' => $assignedClasses,
+        'summary' => $summary,
+        'students' => $students,
+    ]);
+});
+
+Route::get('/blog', function () {
+    return Inertia::render('Blog/Index');
+})->name('blog.index');
+
+Route::get('/blog/{id}', function (int $id) {
+    return Inertia::render('Blog/Show', [
+        'id' => $id,
+    ]);
+})->name('blog.show');
+
+// Public API: Schools list
+Route::get('/api/public/schools', function () {
+    // Use users table as authoritative source for school_name and school_number
+    $rows = DB::table('users')
+        ->selectRaw('TRIM(school_number) as school_number, TRIM(school_name) as school_name')
+        ->whereNotNull('school_number')
+        ->whereNotNull('school_name')
+        ->whereRaw("TRIM(school_number) <> ''")
+        ->whereRaw("TRIM(school_name) <> ''")
+        ->groupBy('school_number','school_name')
+        ->orderBy('school_name')
+        ->get();
+    return response()->json($rows);
+});
+
+// Public Results landing (Schools)
+Route::inertia('/results/schools', 'Results/Schools')->name('results.schools');
+Route::get('/results/schools/{id}', function ($id) {
+    return Inertia::render('Results/School', [
+        'id' => $id,
+    ]);
+})->name('results.schools.show');
+
+Route::get('/results/schools/{id}/exams/{examId}', function ($id, int $examId) {
+    return Inertia::render('Results/View', [
+        'schoolId' => $id,
+        'examId' => $examId,
+    ]);
+})->name('results.schools.exam');
+
+// Public API: Exams for a school_number
+Route::get('/api/public/schools/{id}/exams', function ($id) {
+    $year = request()->integer('year');
+    $q = DB::table('exams as e')
+        ->join('users as u', 'u.id', '=', 'e.created_by')
+        ->where('u.school_number', $id)
+        ->select('e.id', 'e.name', 'e.type', 'e.year', 'e.term', 'e.published_at')
+        ->orderByDesc('e.year')->orderByDesc('e.term')->orderByDesc('e.id');
+    if ($year) { $q->where('e.year', $year); }
+    return response()->json($q->get());
+});
+
+Route::get('/results/schools/{id}/details', function ($id) {
+    $school = DB::table('users')
+        ->where('school_number', $id)
+        ->orderBy('id')
+        ->first(['name','username','email','phone','region','school_name','school_number']);
+
+    $counts = [
+        'teachers' => DB::table('teachers')->where('school_number', $id)->count(),
+        'classes' => DB::table('classes')->where('school_number', $id)->count(),
+        'students' => DB::table('students')
+            ->join('classes', 'students.class_name', '=', 'classes.name')
+            ->where('classes.school_number', $id)
+            ->count(),
+        'subjects' => DB::table('subjects')->where('school_number', $id)->count(),
+    ];
+
+    return Inertia::render('Results/SchoolDetails', [
+        'id' => (string)$id,
+        'school' => $school,
+        'counts' => $counts,
+    ]);
+})->name('results.schools.details');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');

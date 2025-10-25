@@ -1,83 +1,58 @@
 <template>
   <div class="min-h-screen bg-gray-100 text-gray-800">
     <!-- Header -->
-    <header class="bg-white shadow-sm">
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-green-700">{{ appName }}</h1>
-        <nav class="space-x-4 flex items-center">
-          <Link :href="route('login')" class="text-gray-600 hover:text-green-700 font-medium">Login</Link>
-          <Link :href="route('register')" class="px-4 py-2 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700 transition">Start Now</Link>
-        </nav>
-      </div>
-    </header>
+    <Header />
 
-    <!-- Hero Section -->
-    <main class="relative bg-gray-900 py-20 sm:py-24 text-white text-center overflow-hidden">
-      <div class="absolute inset-0 z-0">
-        <img src="/hero-background.jpg" alt="Background" class="h-full w-full object-cover">
-        <div class="absolute inset-0 bg-black/50"></div>
-      </div>
-      <div class="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <h2 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl">
-        <span class="block">Mfumo wa Kisasa wa Usimamizi wa Shule</span>
-        <span class="block text-green-600">Rahisi. Haraka. Madhubuti.</span>
-      </h2>
-      <p class="mt-6 max-w-2xl mx-auto text-lg text-gray-300">
-        RSMS (Result Slip Management System) ni suluhisho la kidijitali linalorahisisha usimamizi wa taarifa za wanafunzi, alama, na matokeo, likiwawezesha walimu na wazazi kufuatilia maendeleo kwa urahisi.
-      </p>
-      <div class="mt-8">
-        <Link :href="route('register')" class="inline-block px-8 py-3 bg-green-600 text-white rounded-lg font-bold text-lg hover:bg-green-700 transition shadow-md">
-          Anza Sasa (Bure)
-        </Link>
-      </div>
-    </div>
-    </main>
+    <Hero />
 
-    <!-- Features Section -->
-    <section class="bg-white py-20">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="text-center">
-                <h3 class="text-3xl font-bold text-gray-900">Sifa Kuu za Mfumo</h3>
-                <p class="mt-4 text-gray-600">Zana zote unazohitaji kwa ajili ya usimamizi bora wa shule yako.</p>
-            </div>
-            <div class="mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-                <div class="text-center p-6 border border-gray-200 rounded-lg">
-                    <h4 class="text-xl font-semibold">Usimamizi wa Wanafunzi</h4>
-                    <p class="mt-2 text-gray-500">Weka na fuatilia taarifa zote muhimu za wanafunzi wako sehemu moja.</p>
-                </div>
-                <div class="text-center p-6 border border-gray-200 rounded-lg">
-                    <h4 class="text-xl font-semibold">Uchakataji wa Matokeo</h4>
-                    <p class="mt-2 text-gray-500">Ingiza alama na toa ripoti za matokeo (result slips) kwa haraka na bila makosa.</p>
-                </div>
-                <div class="text-center p-6 border border-gray-200 rounded-lg">
-                    <h4 class="text-xl font-semibold">Ripoti za Kitaaluma</h4>
-                    <p class="mt-2 text-gray-500">Pata takwimu na ripoti za kina kuhusu maendeleo ya wanafunzi na shule.</p>
-                </div>
-            </div>
+    <Features />
+    
+    <!-- Blog Preview Section -->
+    <section class="py-16">
+      <div class="mx-auto max-w-7xl px-3 sm:px-4 lg:px-8">
+        <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div class="text-left">
+            <h3 class="text-3xl font-bold text-gray-900">Blog</h3>
+            <p class="mt-2 text-gray-600">Habari na masasisho kutoka RSMS.</p>
+          </div>
+          <Link href="/blog" class="inline-flex items-center self-start rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition">
+            More Blog
+          </Link>
         </div>
-    </section>
 
-    <!-- Coming Soon Section -->
-    <section class="py-20">
-        <div class="text-center">
-            <h3 class="text-3xl font-bold text-gray-900">Vipengele Vipya Vinakuja Hivi Karibuni</h3>
-            <p class="mt-4 text-gray-600">Tunaendelea kuboresha mfumo. Tarajia usimamizi wa ratiba, mawasiliano ya wazazi, na mengine mengi!</p>
-            <div class="mt-6">
-                <span class="inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 px-3 py-1 rounded-full">Coming Soon</span>
+        <div class="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <article v-for="post in homePosts" :key="post.id" class="overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md">
+            <img :src="post.image" :alt="post.title" class="h-44 w-full object-cover" />
+            <div class="p-5">
+              <h4 class="text-lg font-semibold text-gray-900 line-clamp-2">{{ post.title }}</h4>
+              <p class="mt-2 text-sm text-gray-600 line-clamp-3">{{ post.excerpt }}</p>
+              <div class="mt-4">
+                <Link href="/blog" class="inline-flex items-center rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  View
+                  <svg class="ml-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 5.5l6 6-6 6-1.5-1.5 3.9-3.9H4v-2h11.9l-3.9-3.9 1.5-1.5z"/></svg>
+                </Link>
+              </div>
             </div>
+          </article>
         </div>
+      </div>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-6">
-        <div class="text-center">
-            <p>&copy; {{ new Date().getFullYear() }} {{ appName }}. Haki zote zimehifadhiwa.</p>
-        </div>
-    </footer>
+    <Footer />
   </div>
 </template>
 
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import Header from '@/Components/Header.vue';
+import Hero from '@/Components/Hero.vue';
+import Features from '@/Components/Features.vue';
+import Footer from '@/Components/Footer.vue';
 const appName = document.title.split(' - ')[1] || document.title || 'RSMS';
+const homePosts = [
+  { id: 1, title: 'Utoaji wa Result Slips kwa Haraka', excerpt: 'Jinsi RSMS inavyorahisisha utoaji wa result slips kwa sekunde chache...', image: '/hero-background.jpg' },
+  { id: 2, title: 'Vidokezo vya Usimamizi wa Darasa', excerpt: 'Njia bora za kukusanya na kuchanganua alama za wanafunzi...', image: '/68186657_56.jpg' },
+  { id: 3, title: 'Ripoti na Takwimu za Ufanisi', excerpt: 'Kutengeneza ripoti za kina kwa haraka na usahihi ndani ya RSMS...', image: '/logo-trans.png' },
+]
 </script>

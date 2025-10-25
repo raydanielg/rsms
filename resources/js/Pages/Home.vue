@@ -14,7 +14,7 @@
     <!-- Hero Section -->
     <main class="relative bg-gray-900 py-20 sm:py-24 text-white text-center overflow-hidden">
       <div class="absolute inset-0 z-0">
-        <img src="/hero-background.jpg" alt="Background" class="h-full w-full object-cover">
+        <img src="/storage/hero-background.jpg" alt="Background" class="h-full w-full object-cover">
         <div class="absolute inset-0 bg-black/50"></div>
       </div>
       <div class="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

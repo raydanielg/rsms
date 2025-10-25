@@ -6,7 +6,7 @@ import { Link } from '@inertiajs/vue3';
 <template>
     <div class="relative flex min-h-screen flex-col items-center pt-6 sm:justify-center sm:pt-0">
         <div
-            class="pointer-events-none absolute inset-0 -z-10 bg-[url('/images/download%20(1).jpg')] bg-cover bg-center"
+            class="pointer-events-none absolute inset-0 -z-10 bg-[url('/68186657_56.jpg')] bg-cover bg-center"
         ></div>
         <div class="pointer-events-none absolute inset-0 -z-10 bg-black/40 backdrop-blur-sm"></div>
 

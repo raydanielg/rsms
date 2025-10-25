@@ -15,12 +15,21 @@ class StudentFactory extends Factory
     public function definition(): array
     {
         $classes = ['Form 1','Form 2','Form 3','Form 4'];
-        $sex = $this->faker->randomElement(['M','F']);
+        $f = $this->faker;
+        if (!$f && class_exists(\Faker\Factory::class)) {
+            $f = \Faker\Factory::create();
+        }
+
+        $sex = $f ? $f->randomElement(['M','F']) : 'M';
+        $reg = $f ? $f->unique()->numerify('####') : str_pad((string)random_int(0,9999), 4, '0', STR_PAD_LEFT);
+        $name = $f ? $f->name($sex === 'M' ? 'male' : 'female') : 'Student '.substr($reg, -4);
+        $cls = $f ? $f->randomElement($classes) : $classes[0];
+
         return [
-            'reg_no' => strtoupper('RSMS-'.$this->faker->unique()->numerify('####')),
-            'name' => $this->faker->name($sex === 'M' ? 'male' : 'female'),
+            'reg_no' => strtoupper('RSMS-'.$reg),
+            'name' => $name,
             'sex' => $sex,
-            'class_name' => $this->faker->randomElement($classes),
+            'class_name' => $cls,
         ];
     }
 }

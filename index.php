@@ -5,18 +5,25 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// The path to your Laravel project directory (one level up from public_html)
+/*
+|--------------------------------------------------------------------------
+| Locate Laravel Project Root
+|--------------------------------------------------------------------------
+| Tunatafuta directory halisi yenye 'vendor' na 'bootstrap/app.php'.
+| Kwa kawaida, hii file (index.php) huwa ipo ndani ya 'public_html'
+| wakati project yenyewe ipo moja juu yake (mfano: /home/user/rsms).
+*/
+
 $candidates = [
-    __DIR__,
-    dirname(__DIR__),
-    __DIR__ . '/../rsms',
-    dirname(__DIR__) . '/rsms',
-    '/home/amoleckc/rsms',
+    dirname(__DIR__),                     // moja juu ya public_html
+    dirname(__DIR__) . '/rsms',           // au kwenye /rsms
+    '/home/amoleckc/rsms',                // path kamili kwenye cPanel
 ];
 
 $project_path = null;
+
 foreach ($candidates as $path) {
-    if (is_file($path . '/vendor/autoload.php') && is_file($path . '/bootstrap/app.php')) {
+    if (file_exists($path . '/vendor/autoload.php') && file_exists($path . '/bootstrap/app.php')) {
         $project_path = $path;
         break;
     }
@@ -24,20 +31,36 @@ foreach ($candidates as $path) {
 
 if (!$project_path) {
     http_response_code(500);
-    echo 'Base path not found. Ensure the Laravel project (with vendor and bootstrap) exists.';
+    echo "<h2 style='font-family:sans-serif;color:#c00;'>⚠️ Base path not found.</h2>";
+    echo "<p>Ensure the Laravel project (with <code>vendor</code> and <code>bootstrap</code>) exists in one of these locations:</p><ul>";
+    foreach ($candidates as $p) {
+        echo "<li>$p</li>";
+    }
+    echo "</ul>";
     exit;
 }
 
-// Determine if the application is in maintenance mode...
-if (file_exists($maintenance = $project_path . '/storage/framework/maintenance.php')) {
-    require $maintenance;
+/*
+|--------------------------------------------------------------------------
+| Maintenance Mode
+|--------------------------------------------------------------------------
+*/
+if (file_exists($project_path . '/storage/framework/maintenance.php')) {
+    require $project_path . '/storage/framework/maintenance.php';
 }
 
-// Register the Composer autoloader...
+/*
+|--------------------------------------------------------------------------
+| Register Composer Autoloader
+|--------------------------------------------------------------------------
+*/
 require $project_path . '/vendor/autoload.php';
 
-// Bootstrap Laravel and handle the request...
-/** @var Application $app */
+/*
+|--------------------------------------------------------------------------
+| Bootstrap Laravel & Handle Request
+|--------------------------------------------------------------------------
+*/
 $app = require_once $project_path . '/bootstrap/app.php';
 
 $app->handleRequest(Request::capture());

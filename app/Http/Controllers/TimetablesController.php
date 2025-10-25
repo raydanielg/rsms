@@ -50,7 +50,8 @@ class TimetablesController extends Controller
         $t->created_by = $request->user()->id;
         $t->save();
 
-        return redirect()->route('timetables.index')->with('success', 'Timetable created');
+        $route = $t->type === 'class' ? 'timetables.class.index' : 'timetables.index';
+        return redirect()->route($route)->with('success', 'Timetable created');
     }
 
     public function classIndex(Request $request)

@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Head } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { Head, usePage, useForm } from '@inertiajs/vue3'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const types = [
   { key: 'class', title: 'Class Timetable', desc: 'Lessons schedule per class', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
@@ -10,20 +10,39 @@ const types = [
   { key: 'teacher', title: 'Teacher Timetable', desc: 'Individual teacher schedule', color: 'bg-violet-100 text-violet-700 border-violet-200' },
 ]
 
+const page = usePage()
 const selected = ref(null)
-const form = ref({ name: '', date: '', scopeType: 'class', scopeValue: '' })
-const canSubmit = computed(() => !!(selected.value && form.value.name && form.value.date))
+const form = useForm({
+  type: '',
+  name: '',
+  effective_date: '',
+  scope_type: 'class',
+  scope_name: '',
+})
+const canSubmit = computed(() => !!(selected.value && form.name && form.effective_date))
 
 function pick(t) {
   selected.value = t
+  // default scope based on type
+  form.scope_type = t.key === 'teacher' ? 'teacher' : 'class'
+  form.type = t.key
 }
 
 async function submit() {
   if (!canSubmit.value) return
-  const payload = { type: selected.value.key, ...form.value }
-  if (window.__toast) window.__toast('success', 'Timetable details captured (demo)')
-  // TODO: Post to backend when endpoint ready
+  form.type = selected.value.key
+  form.post(route('timetables.store'))
 }
+
+onMounted(() => {
+  const q = page.props?.ziggy?.location || ''
+  try {
+    const url = new URL(q)
+    const t = url.searchParams.get('type')
+    const pre = types.find(x => x.key === t)
+    if (pre) pick(pre)
+  } catch {}
+})
 </script>
 
 <template>

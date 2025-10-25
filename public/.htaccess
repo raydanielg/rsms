@@ -4,6 +4,8 @@
     </IfModule>
 
     RewriteEngine On
+    RewriteBase /
+    DirectoryIndex index.php
 
     # Root .htaccess rewrites to /public; no redirects needed here to avoid loops
 

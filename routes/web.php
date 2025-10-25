@@ -17,7 +17,7 @@ use App\Http\Controllers\TimetablesController;
 use App\Models\Exam;
 
 Route::get('/', function () {
-    return Inertia::render('Home');
+    return Inertia::render('Welcome');
 });
 
 // Public: About Us page

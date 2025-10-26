@@ -86,12 +86,12 @@
               <th class="px-3 py-2 text-left font-semibold text-slate-800">SEX</th>
               <th v-for="col in subjectColumns" :key="col.key" class="px-3 py-2 text-center font-semibold text-slate-800">
                 <div class="leading-tight">
-                  <div>{{ col.name }}</div>
-                  <div v-if="col.code" class="mt-0.5 text-[10px] font-normal text-slate-500">Code: {{ col.code }}</div>
+                  <div>{{ col.displayName }}</div>
                 </div>
               </th>
               <th class="px-3 py-2 text-center font-semibold text-slate-800">TOTAL</th>
               <th class="px-3 py-2 text-center font-semibold text-slate-800">AVG</th>
+              <th class="px-3 py-2 text-center font-semibold text-slate-800">GRADE</th>
               <th class="px-3 py-2 text-center font-semibold text-slate-800">DIV</th>
             </tr>
           </thead>
@@ -103,13 +103,14 @@
               <td v-for="col in subjectColumns" :key="col.key" class="px-3 py-2 text-center text-slate-800">{{ markFor(s, col) }}</td>
               <td class="px-3 py-2 text-center text-slate-800">{{ totalFor(s) }}</td>
               <td class="px-3 py-2 text-center text-slate-800">{{ avgFor(s) }}</td>
+              <td class="px-3 py-2 text-center text-slate-800">{{ gradeFor(s) }}</td>
               <td class="px-3 py-2 text-center text-slate-800">{{ s.division }}</td>
             </tr>
             <tr v-if="!loading && students.length === 0">
-              <td :colspan="3 + subjectColumns.length + 3" class="px-3 py-8 text-center text-gray-600">No results found.</td>
+              <td :colspan="3 + subjectColumns.length + 4" class="px-3 py-8 text-center text-gray-600">No results found.</td>
             </tr>
             <tr v-if="loading">
-              <td :colspan="3 + subjectColumns.length + 3" class="px-3 py-8 text-center text-gray-600">Loading results...</td>
+              <td :colspan="3 + subjectColumns.length + 4" class="px-3 py-8 text-center text-gray-600">Loading results...</td>
             </tr>
           </tbody>
         </table>
@@ -137,7 +138,7 @@
               <tr v-for="(row, idx) in subjectStats" :key="row.key" class="hover:bg-slate-50">
                 <td class="px-3 py-2 text-slate-900">
                   <div class="flex items-center gap-2">
-                    <span>{{ row.name }}</span>
+                    <span>{{ row.displayName }}</span>
                     <span v-if="idx === 0" class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Best</span>
                     <span v-else-if="idx === subjectStats.length - 1" class="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">Lowest</span>
                   </div>
@@ -201,6 +202,15 @@ function formatSubjects(list) {
   return list.map(it => `${it.code} - ${it.grade}`).join('  •  ')
 }
 
+function chooseSubjectDisplayName(subject, fallbackIndex) {
+  const candidates = [subject?.name, subject?.title, subject?.label, subject?.full_name, subject?.code]
+  const withLetters = candidates.find((c) => typeof c === 'string' && /[A-Za-z]/.test(c))
+  if (withLetters) return withLetters
+  const anyValue = candidates.find((c) => typeof c === 'string' && c.trim() !== '')
+  if (anyValue) return anyValue
+  return `Subject ${fallbackIndex}`
+}
+
 const subjectColumns = computed(() => {
   const map = new Map()
   let autoIndex = 1
@@ -211,13 +221,31 @@ const subjectColumns = computed(() => {
         map.set(key, {
           key,
           code: sub.code ?? null,
-          name: sub.name ?? sub.code ?? `Subject ${autoIndex}`,
+          name: sub.name ?? null,
+          displayName: chooseSubjectDisplayName(sub, autoIndex),
         })
         autoIndex++
+      } else {
+        const entry = map.get(key)
+        if (!entry.name && sub.name) entry.name = sub.name
+        if (!entry.code && sub.code) entry.code = sub.code
+        if (!entry.displayName || !/[A-Za-z]/.test(entry.displayName)) {
+          entry.displayName = chooseSubjectDisplayName(sub, autoIndex)
+        }
       }
     }
   }
   return Array.from(map.values())
+})
+
+const subjectNameLookup = computed(() => {
+  const lookup = new Map()
+  for (const col of subjectColumns.value) {
+    if (col.code) lookup.set(col.code, col.displayName)
+    if (col.name) lookup.set(col.name, col.displayName)
+    lookup.set(col.key, col.displayName)
+  }
+  return lookup
 })
 
 function markFor(s, column) {
@@ -241,6 +269,16 @@ function avgFor(s) {
   let sum = 0, cnt = 0
   for (const sub of (s.subjects || [])) { if (typeof sub.marks === 'number') { sum += sub.marks; cnt++ } }
   return cnt ? Math.round(sum / cnt) : 0
+}
+
+function gradeFor(s) {
+  const avg = avgFor(s)
+  if (avg >= 75) return 'A'
+  if (avg >= 65) return 'B'
+  if (avg >= 55) return 'C'
+  if (avg >= 40) return 'D'
+  if (avg > 0) return 'F'
+  return '-'
 }
 
 async function loadExamMeta() {

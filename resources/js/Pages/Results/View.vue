@@ -84,10 +84,10 @@
               <th class="px-3 py-1 text-left font-semibold text-rose-900">CNO</th>
               <th class="px-3 py-2 text-left font-semibold text-slate-800">STUDENT NAME</th>
               <th class="px-3 py-2 text-left font-semibold text-slate-800">SEX</th>
-              <th v-for="code in subjectCodes" :key="code" class="px-3 py-2 text-center font-semibold text-slate-800">
+              <th v-for="col in subjectColumns" :key="col.key" class="px-3 py-2 text-center font-semibold text-slate-800">
                 <div class="leading-tight">
-                  <div>{{ code }}</div>
-                  <div v-if="subjectMeta[code]" class="mt-0.5 text-[10px] font-normal text-slate-500">{{ subjectMeta[code] }}</div>
+                  <div>{{ col.name }}</div>
+                  <div v-if="col.code" class="mt-0.5 text-[10px] font-normal text-slate-500">Code: {{ col.code }}</div>
                 </div>
               </th>
               <th class="px-3 py-2 text-center font-semibold text-slate-800">TOTAL</th>
@@ -100,16 +100,16 @@
               <td class="px-3 py-2 text-slate-900 whitespace-nowrap">{{ s.reg_no }}</td>
               <td class="px-3 py-2 text-slate-900">{{ s.name || s.student_name || '—' }}</td>
               <td class="px-3 py-2 text-slate-800">{{ s.sex }}</td>
-              <td v-for="code in subjectCodes" :key="code" class="px-3 py-2 text-center text-slate-800">{{ markFor(s, code) }}</td>
+              <td v-for="col in subjectColumns" :key="col.key" class="px-3 py-2 text-center text-slate-800">{{ markFor(s, col) }}</td>
               <td class="px-3 py-2 text-center text-slate-800">{{ totalFor(s) }}</td>
               <td class="px-3 py-2 text-center text-slate-800">{{ avgFor(s) }}</td>
               <td class="px-3 py-2 text-center text-slate-800">{{ s.division }}</td>
             </tr>
             <tr v-if="!loading && students.length === 0">
-              <td :colspan="3 + subjectCodes.length + 3" class="px-3 py-8 text-center text-gray-600">No results found.</td>
+              <td :colspan="3 + subjectColumns.length + 3" class="px-3 py-8 text-center text-gray-600">No results found.</td>
             </tr>
             <tr v-if="loading">
-              <td :colspan="3 + subjectCodes.length + 3" class="px-3 py-8 text-center text-gray-600">Loading results...</td>
+              <td :colspan="3 + subjectColumns.length + 3" class="px-3 py-8 text-center text-gray-600">Loading results...</td>
             </tr>
           </tbody>
         </table>
@@ -134,10 +134,10 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr v-for="(row, idx) in subjectStats" :key="row.code" class="hover:bg-slate-50">
+              <tr v-for="(row, idx) in subjectStats" :key="row.key" class="hover:bg-slate-50">
                 <td class="px-3 py-2 text-slate-900">
                   <div class="flex items-center gap-2">
-                    <span>{{ row.code }}</span>
+                    <span>{{ row.name }}</span>
                     <span v-if="idx === 0" class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Best</span>
                     <span v-else-if="idx === subjectStats.length - 1" class="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">Lowest</span>
                   </div>
@@ -201,27 +201,36 @@ function formatSubjects(list) {
   return list.map(it => `${it.code} - ${it.grade}`).join('  •  ')
 }
 
-const subjectCodes = computed(() => {
-  const set = new Set()
-  for (const s of students.value) {
-    for (const sub of (s.subjects || [])) { if (sub.code) set.add(sub.code) }
-  }
-  return Array.from(set).sort()
-})
-
-const subjectMeta = computed(() => {
-  const meta = {}
+const subjectColumns = computed(() => {
+  const map = new Map()
+  let autoIndex = 1
   for (const s of students.value) {
     for (const sub of (s.subjects || [])) {
-      if (sub.code && sub.name && !meta[sub.code]) meta[sub.code] = sub.name
+      const key = sub.code ?? sub.name ?? `subject-${autoIndex}`
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          code: sub.code ?? null,
+          name: sub.name ?? sub.code ?? `Subject ${autoIndex}`,
+        })
+        autoIndex++
+      }
     }
   }
-  return meta
+  return Array.from(map.values())
 })
 
-function markFor(s, code) {
-  const sub = (s.subjects || []).find(x => x.code === code)
-  return sub && typeof sub.marks === 'number' ? sub.marks : '-'
+function markFor(s, column) {
+  const subjects = s.subjects || []
+  let found = null
+  if (column.code) {
+    found = subjects.find(x => x.code === column.code)
+  }
+  if (!found && column.name) {
+    const target = String(column.name).toLowerCase()
+    found = subjects.find(x => String(x.name || '').toLowerCase() === target)
+  }
+  return found && typeof found.marks === 'number' ? found.marks : '-'
 }
 function totalFor(s) {
   let sum = 0
@@ -277,11 +286,26 @@ function doPrint() { window.print() }
 
 const subjectStats = computed(() => {
   const map = new Map()
+  let autoIndex = 1
   for (const s of students.value) {
     for (const sub of (s.subjects || [])) {
-      const code = sub.code || 'SUBJ'
-      if (!map.has(code)) map.set(code, { code, A:0, B:0, C:0, D:0, F:0, sum:0, cnt:0 })
-      const rec = map.get(code)
+      const key = sub.code ?? sub.name ?? `subject-${autoIndex}`
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          code: sub.code ?? null,
+          name: sub.name ?? sub.code ?? `Subject ${autoIndex}`,
+          A:0,
+          B:0,
+          C:0,
+          D:0,
+          F:0,
+          sum:0,
+          cnt:0,
+        })
+        autoIndex++
+      }
+      const rec = map.get(key)
       const grade = String(sub.grade || '').toUpperCase()
       if (grade === 'A') rec.A++
       else if (grade === 'B') rec.B++

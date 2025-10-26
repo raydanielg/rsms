@@ -22,11 +22,12 @@ class StudentFactory extends Factory
 
         $sex = $f ? $f->randomElement(['M','F']) : 'M';
         $reg = $f ? $f->unique()->numerify('####') : str_pad((string)random_int(0,9999), 4, '0', STR_PAD_LEFT);
+        $school = 'S'.($f ? $f->numerify('####') : str_pad((string)random_int(0,9999), 4, '0', STR_PAD_LEFT));
         $name = $f ? $f->name($sex === 'M' ? 'male' : 'female') : 'Student '.substr($reg, -4);
         $cls = $f ? $f->randomElement($classes) : $classes[0];
 
         return [
-            'reg_no' => strtoupper('RSMS-'.$reg),
+            'reg_no' => strtoupper($school.'-'.$reg),
             'name' => $name,
             'sex' => $sex,
             'class_name' => $cls,

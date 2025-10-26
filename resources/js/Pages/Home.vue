@@ -49,10 +49,10 @@ import Header from '@/Components/Header.vue';
 import Hero from '@/Components/Hero.vue';
 import Features from '@/Components/Features.vue';
 import Footer from '@/Components/Footer.vue';
-const appName = document.title.split(' - ')[1] || document.title || 'RSMS';
-const homePosts = [
-  { id: 1, title: 'Utoaji wa Result Slips kwa Haraka', excerpt: 'Jinsi RSMS inavyorahisisha utoaji wa result slips kwa sekunde chache...', image: '/hero-background.jpg' },
-  { id: 2, title: 'Vidokezo vya Usimamizi wa Darasa', excerpt: 'Njia bora za kukusanya na kuchanganua alama za wanafunzi...', image: '/68186657_56.jpg' },
-  { id: 3, title: 'Ripoti na Takwimu za Ufanisi', excerpt: 'Kutengeneza ripoti za kina kwa haraka na usahihi ndani ya RSMS...', image: '/logo-trans.png' },
-]
+
+const props = defineProps({
+  posts: { type: Array, default: () => [] },
+});
+
+const homePosts = props.posts;
 </script>

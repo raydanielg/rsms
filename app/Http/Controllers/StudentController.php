@@ -87,8 +87,8 @@ class StudentController extends Controller
             $photoPath = $request->file('photo')->store('students','public');
         }
 
-        $nextId = (int) (Student::max('id') ?? 0) + 1;
-        $regNo = 'RSMS-'.str_pad((string)$nextId, 4, '0', STR_PAD_LEFT);
+        // Generate per-school reg no: SCHOOL-XXXX
+        $regNo = $this->nextRegNo($schoolNumber);
 
         Student::create([
             'reg_no' => $regNo,
@@ -188,13 +188,24 @@ class StudentController extends Controller
         while (($row = fgetcsv($handle)) !== false) {
             $data = array_combine($mapped, $row);
             if (!$data || empty($data['reg_no'])) {
-                continue;
+                // If no reg_no provided, auto-generate using current user's school number
+                $data = $data ?: [];
+                $data['reg_no'] = $this->nextRegNo($schoolNumber);
             }
-            // Validate optional exam_no prefix if present
+            // Normalize reg_no and validate optional exam_no prefix if present
             if (!empty($data['exam_no']) && $schoolNumber) {
                 $prefix = $schoolNumber.'-';
                 if (!str_starts_with($data['exam_no'], $prefix)) {
                     $data['exam_no'] = $prefix . ltrim((string)$data['exam_no'], 'S0123456789-');
+                }
+            }
+            if ($schoolNumber) {
+                $regPrefix = $schoolNumber.'-';
+                // If reg_no lacks school prefix, coerce it
+                if (!str_starts_with((string)$data['reg_no'], $regPrefix)) {
+                    $suffix = preg_replace('/[^0-9]/', '', (string)$data['reg_no']);
+                    $suffix = str_pad(substr($suffix ?? '', -4), 4, '0', STR_PAD_LEFT);
+                    $data['reg_no'] = $regPrefix.$suffix;
                 }
             }
 
@@ -388,5 +399,26 @@ class StudentController extends Controller
         $student = Student::findOrFail($id);
         $student->delete();
         return redirect()->route('students.index')->with('success', 'Student deleted successfully.');
+    }
+
+    private function nextRegNo(?string $schoolNumber): string
+    {
+        $prefix = ($schoolNumber ?: 'S0000') . '-';
+        // Find last existing reg_no for this school and increment
+        $last = Student::query()
+            ->where('reg_no', 'like', $prefix.'%')
+            ->orderByDesc('id')
+            ->value('reg_no');
+        $next = 1;
+        if ($last) {
+            if (preg_match('/^(?:'.preg_quote($prefix,'/').')([0-9]{1,})$/', $last, $m)) {
+                $next = ((int)$m[1]) + 1;
+            } else {
+                // Fallback: count existing for this school
+                $count = Student::where('reg_no', 'like', $prefix.'%')->count();
+                $next = $count + 1;
+            }
+        }
+        return $prefix . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
     }
 }

@@ -123,35 +123,43 @@
         <div class="mb-3 text-center text-sm font-semibold text-slate-800">Performance by Subject</div>
         <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-lg">
           <table class="min-w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50">
+            <thead class="bg-slate-100">
               <tr>
-                <th class="px-3 py-2 text-left font-semibold text-slate-800">SUBJECT</th>
+                <th class="px-3 py-2 text-left font-semibold text-slate-800">#</th>
+                <th class="px-3 py-2 text-left font-semibold text-slate-800">Subject</th>
+                <th class="px-3 py-2 text-center font-semibold text-slate-800">Pass %</th>
                 <th class="px-3 py-2 text-center font-semibold text-slate-800">A</th>
                 <th class="px-3 py-2 text-center font-semibold text-slate-800">B</th>
                 <th class="px-3 py-2 text-center font-semibold text-slate-800">C</th>
                 <th class="px-3 py-2 text-center font-semibold text-slate-800">D</th>
                 <th class="px-3 py-2 text-center font-semibold text-slate-800">F</th>
-                <th class="px-3 py-2 text-center font-semibold text-slate-800">AVERAGE</th>
+                <th class="px-3 py-2 text-center font-semibold text-slate-800">Average</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr v-for="(row, idx) in subjectStats" :key="row.key" class="hover:bg-slate-50">
+              <tr v-for="row in subjectStats" :key="row.key" class="hover:bg-slate-50">
+                <td class="px-3 py-2 text-sm font-semibold text-slate-700">{{ row.position }}</td>
                 <td class="px-3 py-2 text-slate-900">
                   <div class="flex items-center gap-2">
-                    <span>{{ row.displayName }}</span>
-                    <span v-if="idx === 0" class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Best</span>
-                    <span v-else-if="idx === subjectStats.length - 1" class="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">Lowest</span>
+                    <span class="font-medium">{{ row.displayName }}</span>
+                    <span v-if="row.position === 1" class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Best</span>
+                    <span v-else-if="row.position === subjectStats.length" class="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">Lowest</span>
                   </div>
                 </td>
-                <td class="px-3 py-2 text-center text-slate-800">{{ row.A }}</td>
-                <td class="px-3 py-2 text-center text-slate-800">{{ row.B }}</td>
-                <td class="px-3 py-2 text-center text-slate-800">{{ row.C }}</td>
-                <td class="px-3 py-2 text-center text-slate-800">{{ row.D }}</td>
-                <td class="px-3 py-2 text-center text-slate-800">{{ row.F }}</td>
+                <td class="px-3 py-2 text-center">
+                  <span :class="passRateClass(row.passRate)" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                    {{ row.passRate }}%
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-center text-emerald-700 font-medium">{{ row.A }}</td>
+                <td class="px-3 py-2 text-center text-emerald-600">{{ row.B }}</td>
+                <td class="px-3 py-2 text-center text-amber-600">{{ row.C }}</td>
+                <td class="px-3 py-2 text-center text-orange-500">{{ row.D }}</td>
+                <td class="px-3 py-2 text-center text-rose-600 font-semibold">{{ row.F }}</td>
                 <td class="px-3 py-2 text-center text-slate-900 font-semibold">{{ row.avg }}</td>
               </tr>
               <tr v-if="subjectStats.length === 0">
-                <td colspan="7" class="px-3 py-8 text-center text-gray-600">No subject data.</td>
+                <td colspan="9" class="px-3 py-8 text-center text-gray-600">No subject data.</td>
               </tr>
             </tbody>
           </table>
@@ -281,6 +289,13 @@ function gradeFor(s) {
   return '-'
 }
 
+function passRateClass(rate) {
+  if (rate >= 80) return 'bg-emerald-100 text-emerald-700'
+  if (rate >= 60) return 'bg-sky-100 text-sky-700'
+  if (rate >= 40) return 'bg-amber-100 text-amber-700'
+  return 'bg-rose-100 text-rose-700'
+}
+
 async function loadExamMeta() {
   try {
     const res = await fetch(`/api/public/schools/${props.schoolId}/exams`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
@@ -340,6 +355,8 @@ const subjectStats = computed(() => {
           F:0,
           sum:0,
           cnt:0,
+          pass:0,
+          displayName: chooseSubjectDisplayName(sub, autoIndex),
         })
         autoIndex++
       }
@@ -351,11 +368,19 @@ const subjectStats = computed(() => {
       else if (grade === 'D') rec.D++
       else rec.F++
       if (typeof sub.marks === 'number') { rec.sum += sub.marks; rec.cnt++ }
+      if (typeof sub.marks === 'number' && sub.marks >= 40) rec.pass++
     }
   }
-  const rows = Array.from(map.values()).map(r => ({ ...r, avg: r.cnt ? Math.round(r.sum / r.cnt) : 0 }))
-  rows.sort((a,b) => b.avg - a.avg)
-  return rows
+  const rows = Array.from(map.values()).map((r) => ({
+    ...r,
+    avg: r.cnt ? Math.round(r.sum / r.cnt) : 0,
+    passRate: r.cnt ? Math.round((r.pass / r.cnt) * 100) : 0,
+  }))
+  rows.sort((a,b) => {
+    if (b.passRate === a.passRate) return b.avg - a.avg
+    return b.passRate - a.passRate
+  })
+  return rows.map((r, idx) => ({ ...r, position: idx + 1 }))
 })
 </script>
 

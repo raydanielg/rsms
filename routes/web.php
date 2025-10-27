@@ -15,6 +15,9 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\TeachersController;
 use App\Http\Controllers\TimetablesController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Emas\EmasAuthController;
+use App\Http\Controllers\Emas\EmasDashboardController;
 use App\Models\Exam;
 
 Route::get('/', function () {
@@ -342,6 +345,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/students/{id}/behaviours', [StudentController::class, 'behaviours'])->name('students.behaviours');
     Route::post('/students/{id}/behaviours', [StudentController::class, 'addBehaviour'])->name('students.behaviours.add');
     Route::patch('/students/{id}/status', [StudentController::class, 'updateStatus'])->name('students.status.update');
+    Route::get('/students/{student}/subjects', [StudentController::class, 'subjects'])->name('students.subjects');
+    Route::post('/students/{student}/subjects', [StudentController::class, 'attachSubject'])->name('students.subjects.attach');
+    Route::delete('/students/{student}/subjects/{subject}', [StudentController::class, 'detachSubject'])->name('students.subjects.detach');
 
     // Classes
     Route::get('/classes', [ClassController::class, 'index'])->name('classes.index');
@@ -432,6 +438,95 @@ Route::middleware('auth')->group(function () {
     Route::inertia('/information/announcements', 'Information/Announcements')->name('information.announcements');
     Route::inertia('/information/policies', 'Information/Policies')->name('information.policies');
     Route::inertia('/information/updates', 'Information/Updates')->name('information.updates');
+});
+
+// Admin Routes
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+});
+
+// EMAS Routes
+Route::prefix('emas')->name('emas.')->group(function () {
+    // EMAS Authentication Routes
+    Route::get('/login', [EmasAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [EmasAuthController::class, 'login']);
+    Route::get('/register', [EmasAuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [EmasAuthController::class, 'register']);
+    Route::post('/logout', [EmasAuthController::class, 'logout'])->name('logout');
+
+    // Root redirect
+    Route::get('/', function () {
+        if (auth()->guard('emas')->check()) {
+            return redirect()->route('emas.dashboard');
+        }
+        return redirect()->route('emas.login');
+    });
+
+    // EMAS Protected Routes
+    Route::middleware('emas')->group(function () {
+        Route::get('/dashboard', [EmasDashboardController::class, 'index'])->name('dashboard');
+        
+        // Exams Management
+        Route::resource('exams', \App\Http\Controllers\Emas\EmasExamController::class)->names([
+            'index' => 'exams.index',
+            'create' => 'exams.create',
+            'store' => 'exams.store',
+            'show' => 'exams.show',
+            'edit' => 'exams.edit',
+            'update' => 'exams.update',
+            'destroy' => 'exams.destroy',
+        ]);
+
+        // Candidates Management
+        Route::resource('candidates', \App\Http\Controllers\Emas\EmasCandidateController::class)->names([
+            'index' => 'candidates.index',
+            'create' => 'candidates.create',
+            'store' => 'candidates.store',
+            'show' => 'candidates.show',
+            'edit' => 'candidates.edit',
+            'update' => 'candidates.update',
+            'destroy' => 'candidates.destroy',
+        ]);
+
+        // Results Management
+        Route::prefix('results')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Emas\EmasResultController::class, 'index'])->name('results.index');
+            Route::get('/upload', [\App\Http\Controllers\Emas\EmasResultController::class, 'upload'])->name('results.upload');
+            Route::post('/store', [\App\Http\Controllers\Emas\EmasResultController::class, 'store'])->name('results.store');
+            Route::get('/{result}', [\App\Http\Controllers\Emas\EmasResultController::class, 'show'])->name('results.show');
+            Route::delete('/{result}', [\App\Http\Controllers\Emas\EmasResultController::class, 'destroy'])->name('results.destroy');
+        });
+
+        // Centers Management
+        Route::resource('centers', \App\Http\Controllers\Emas\EmasCenterController::class)->names([
+            'index' => 'centers.index',
+            'create' => 'centers.create',
+            'store' => 'centers.store',
+            'show' => 'centers.show',
+            'edit' => 'centers.edit',
+            'update' => 'centers.update',
+            'destroy' => 'centers.destroy',
+        ]);
+
+        // Reports & Analytics
+        Route::prefix('reports')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Emas\EmasReportController::class, 'index'])->name('reports.index');
+            Route::post('/generate', [\App\Http\Controllers\Emas\EmasReportController::class, 'generate'])->name('reports.generate');
+        });
+
+        // Markers Management
+        Route::resource('markers', \App\Http\Controllers\Emas\EmasMarkerController::class)->names([
+            'index' => 'markers.index',
+            'create' => 'markers.create',
+            'store' => 'markers.store',
+            'show' => 'markers.show',
+            'edit' => 'markers.edit',
+            'update' => 'markers.update',
+            'destroy' => 'markers.destroy',
+        ]);
+        Route::post('/markers/assign', [\App\Http\Controllers\Emas\EmasMarkerController::class, 'assign'])->name('markers.assign');
+        Route::get('/markers-assignments', [\App\Http\Controllers\Emas\EmasMarkerController::class, 'assignments'])->name('markers.assignments');
+    });
 });
 
 require __DIR__.'/auth.php';

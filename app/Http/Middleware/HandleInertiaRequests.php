@@ -29,10 +29,13 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        // Check which guard is authenticated
+        $user = $request->user() ?? $request->user('emas');
+        
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
             'school_year' => fn () => (int) ($request->session()->get('school_year', (int) date('Y'))),
             'flash' => [

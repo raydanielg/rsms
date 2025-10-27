@@ -25,4 +25,11 @@ class Student extends Model
         'status_reason',
         'status_date',
     ];
+
+    public function subjects()
+    {
+        return $this->belongsToMany(Subject::class, 'student_subject')
+            ->withPivot('is_optional')
+            ->withTimestamps();
+    }
 }

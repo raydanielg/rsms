@@ -127,7 +127,9 @@
               <tr>
                 <th class="px-3 py-2 text-left font-semibold text-slate-800">#</th>
                 <th class="px-3 py-2 text-left font-semibold text-slate-800">Subject</th>
+                <th class="px-3 py-2 text-center font-semibold text-slate-800">Candidates</th>
                 <th class="px-3 py-2 text-center font-semibold text-slate-800">Pass %</th>
+                <th class="px-3 py-2 text-center font-semibold text-slate-800">Fail %</th>
                 <th class="px-3 py-2 text-center font-semibold text-slate-800">A</th>
                 <th class="px-3 py-2 text-center font-semibold text-slate-800">B</th>
                 <th class="px-3 py-2 text-center font-semibold text-slate-800">C</th>
@@ -146,9 +148,15 @@
                     <span v-else-if="row.position === subjectStats.length" class="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">Lowest</span>
                   </div>
                 </td>
+                <td class="px-3 py-2 text-center text-slate-700">{{ row.candidateCount }}</td>
                 <td class="px-3 py-2 text-center">
                   <span :class="passRateClass(row.passRate)" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">
                     {{ row.passRate }}%
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-center">
+                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-rose-100 text-rose-700">
+                    {{ row.failRate }}%
                   </span>
                 </td>
                 <td class="px-3 py-2 text-center text-emerald-700 font-medium">{{ row.A }}</td>
@@ -159,7 +167,7 @@
                 <td class="px-3 py-2 text-center text-slate-900 font-semibold">{{ row.avg }}</td>
               </tr>
               <tr v-if="subjectStats.length === 0">
-                <td colspan="9" class="px-3 py-8 text-center text-gray-600">No subject data.</td>
+                <td colspan="10" class="px-3 py-8 text-center text-gray-600">No subject data.</td>
               </tr>
             </tbody>
           </table>
@@ -356,6 +364,7 @@ const subjectStats = computed(() => {
           sum:0,
           cnt:0,
           pass:0,
+          learners: new Set(),
           displayName: chooseSubjectDisplayName(sub, autoIndex),
         })
         autoIndex++
@@ -369,13 +378,21 @@ const subjectStats = computed(() => {
       else rec.F++
       if (typeof sub.marks === 'number') { rec.sum += sub.marks; rec.cnt++ }
       if (typeof sub.marks === 'number' && sub.marks >= 40) rec.pass++
+      if (s?.reg_no) rec.learners.add(s.reg_no)
     }
   }
-  const rows = Array.from(map.values()).map((r) => ({
-    ...r,
-    avg: r.cnt ? Math.round(r.sum / r.cnt) : 0,
-    passRate: r.cnt ? Math.round((r.pass / r.cnt) * 100) : 0,
-  }))
+  const rows = Array.from(map.values()).map((r) => {
+    const candidates = r.learners.size || r.cnt
+    const avg = r.cnt ? Math.round(r.sum / r.cnt) : 0
+    const passRate = candidates ? Math.round((r.pass / candidates) * 100) : 0
+    return {
+      ...r,
+      candidateCount: candidates,
+      avg,
+      passRate,
+      failRate: candidates ? Math.round(((candidates - r.pass) / candidates) * 100) : 0,
+    }
+  })
   rows.sort((a,b) => {
     if (b.passRate === a.passRate) return b.avg - a.avg
     return b.passRate - a.passRate

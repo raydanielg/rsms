@@ -19,4 +19,11 @@ class Subject extends Model
     {
         return $this->belongsToMany(SchoolClass::class, 'class_subject');
     }
+
+    public function students()
+    {
+        return $this->belongsToMany(Student::class, 'student_subject')
+            ->withPivot('is_optional')
+            ->withTimestamps();
+    }
 }

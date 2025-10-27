@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, reactive } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 
@@ -9,6 +9,7 @@ const props = defineProps({
   all_classes: { type: Array, default: () => [] },
   filters: { type: Object, default: () => ({ q: '', class: '', sex: '' }) },
   school_number: { type: String, default: '' },
+  class_subjects: { type: Object, default: () => ({}) },
 });
 
 // Local filter state synced with server via GET
@@ -49,6 +50,67 @@ async function confirmDelete() {
     });
   } finally {
     deleting.value = false;
+  }
+}
+
+async function removeInlineSubject(student, subject) {
+  if (!student?.id || !subject?.id) return;
+  const key = inlineKey(student.id, subject.id);
+  setInlineRemoving(key, true);
+  try {
+    const url = route('students.subjects.detach', { student: student.id, subject: subject.id });
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': csrfToken(),
+      },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      window.__toast && window.__toast('error', data.message || 'Imeshindikana kuondoa somo.');
+      return;
+    }
+    recordInlineRemoval(student.id, subject);
+    syncListAfterChange();
+    window.__toast && window.__toast('success', 'Somo limeondolewa.');
+  } catch (e) {
+    window.__toast && window.__toast('error', e instanceof Error ? e.message : 'Imeshindikana kuondoa somo.');
+  } finally {
+    setInlineRemoving(key, false);
+  }
+}
+
+async function addInlineSubject(student, subject) {
+  if (!student?.id || !subject?.id) {
+    window.__toast && window.__toast('error', 'Haikuwezekana kutambua mwanafunzi au somo.');
+    return;
+  }
+  const key = inlineKey(student.id, subject.id);
+  setInlineAdding(key, true);
+  try {
+    const url = route('students.subjects.attach', { student: student.id });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': csrfToken(),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ subject_id: subject.id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      window.__toast && window.__toast('error', data.message || 'Imeshindikana kuongeza somo.');
+      return;
+    }
+    removeInlineHistory(student.id, subject.id);
+    syncListAfterChange();
+    window.__toast && window.__toast('success', 'Somo limeongezwa tena.');
+  } catch (e) {
+    window.__toast && window.__toast('error', e instanceof Error ? e.message : 'Imeshindikana kuongeza somo.');
+  } finally {
+    setInlineAdding(key, false);
   }
 }
 
@@ -180,6 +242,258 @@ watch(q, (val) => {
     }
   }, 300);
 });
+
+const subjectModal = ref({
+  open: false,
+  loading: false,
+  student: null,
+  core: [],
+  classOptional: [],
+  optional: [],
+  available: [],
+  addId: '',
+  saving: false,
+  removingId: null,
+  quickAddingId: null,
+  error: '',
+});
+
+const inlineRemoving = ref(new Set());
+const inlineAdding = ref(new Set());
+const inlineRemovedHistory = reactive(new Map());
+
+function classSubjectsForStudent(student) {
+  if (!student) return [];
+  const key = student.class_name || '';
+  const list = props.class_subjects?.[key] || [];
+  return Array.isArray(list) ? list : [];
+}
+
+function classCoreSubjectsForStudent(student) {
+  const subjects = classSubjectsForStudent(student);
+  if (!subjects.length) return [];
+  return subjects.filter((sub, idx) => sub.is_core === true || (sub.is_core === undefined && idx < 7)).slice(0, 7);
+}
+
+function classElectiveSubjectsForStudent(student) {
+  const subjects = classSubjectsForStudent(student);
+  if (!subjects.length) return [];
+  return subjects.filter((sub, idx) => sub.is_core === false || (sub.is_core === undefined && idx >= 7));
+}
+
+function assignedOptionalSubjectsForStudent(student) {
+  if (!student) return [];
+  const list = student.subjects || [];
+  return Array.isArray(list) ? list : [];
+}
+
+function classAvailableOptionalSubjectsForStudent(student) {
+  const classOptionals = classElectiveSubjectsForStudent(student);
+  if (!classOptionals.length) return [];
+  const assignedIds = new Set(assignedOptionalSubjectsForStudent(student).map(sub => sub.id));
+  return classOptionals.filter(sub => !assignedIds.has(sub.id));
+}
+
+function subjectCode(sub) {
+  if (!sub) return '—';
+  return sub.code || sub.name || '—';
+}
+
+function subjectLabel(sub) {
+  if (!sub) return '—';
+  return sub.name || sub.code || '—';
+}
+
+function subjectName(sub) {
+  return sub?.name || sub?.code || '—';
+}
+
+function recordInlineRemoval(studentId, subject) {
+  if (!studentId || !subject?.id) return;
+  const list = inlineRemovedHistory.get(studentId) || [];
+  if (!list.some(item => item.id === subject.id)) {
+    inlineRemovedHistory.set(studentId, [...list, subject]);
+  }
+}
+
+function inlineRemovedFor(studentId) {
+  return inlineRemovedHistory.get(studentId) || [];
+}
+
+function removeInlineHistory(studentId, subjectId) {
+  if (!studentId || !subjectId) return;
+  const list = inlineRemovedHistory.get(studentId) || [];
+  const filtered = list.filter(item => item.id !== subjectId);
+  inlineRemovedHistory.set(studentId, filtered);
+}
+
+function inlineKey(studentId, subjectId) {
+  return `${studentId ?? ''}:${subjectId ?? ''}`;
+}
+
+function setInlineRemoving(key, value) {
+  const next = new Set(inlineRemoving.value);
+  if (value) next.add(key); else next.delete(key);
+  inlineRemoving.value = next;
+}
+
+function isInlineRemoving(studentId, subjectId) {
+  return inlineRemoving.value.has(inlineKey(studentId, subjectId));
+}
+
+function setInlineAdding(key, value) {
+  const next = new Set(inlineAdding.value);
+  if (value) next.add(key); else next.delete(key);
+  inlineAdding.value = next;
+}
+
+function isInlineAdding(studentId, subjectId) {
+  return inlineAdding.value.has(inlineKey(studentId, subjectId));
+}
+
+function resetSubjectModal() {
+  Object.assign(subjectModal.value, {
+    open: false,
+    loading: false,
+    student: null,
+    core: [],
+    classOptional: [],
+    optional: [],
+    available: [],
+    addId: '',
+    saving: false,
+    removingId: null,
+    error: '',
+  });
+}
+
+function closeSubjects() {
+  subjectModal.value.open = false;
+  setTimeout(() => resetSubjectModal(), 200);
+}
+
+function applySubjectPayload(payload) {
+  if (!payload) return;
+  const available = Array.isArray(payload.available) ? payload.available : [];
+  Object.assign(subjectModal.value, {
+    student: payload.student || subjectModal.value.student,
+    core: Array.isArray(payload.core) ? payload.core : [],
+    classOptional: Array.isArray(payload.class_optional) ? payload.class_optional : subjectModal.value.classOptional,
+    optional: Array.isArray(payload.optional) ? payload.optional : [],
+    available,
+    addId: available.length ? String(available[0].id) : '',
+    quickAddingId: null,
+  });
+}
+
+async function fetchSubjectPayload(studentId) {
+  const url = route('students.subjects', { student: studentId });
+  const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+  if (!res.ok) {
+    const problem = await res.json().catch(() => ({}));
+    throw new Error(problem.message || 'Failed to load subjects');
+  }
+  return res.json();
+}
+
+function syncListAfterChange() {
+  router.reload({ only: ['students', 'class_subjects'], preserveState: true, preserveScroll: true });
+}
+
+async function openSubjects(student) {
+  if (!student?.id) {
+    window.__toast && window.__toast('error', 'Missing student ID');
+    return;
+  }
+  Object.assign(subjectModal.value, {
+    open: true,
+    loading: true,
+    student: { id: student.id, name: student.name, reg_no: student.reg_no, class_name: student.class_name },
+    core: classCoreSubjectsForStudent(student),
+    classOptional: classAvailableOptionalSubjectsForStudent(student),
+    optional: assignedOptionalSubjectsForStudent(student),
+    available: classAvailableOptionalSubjectsForStudent(student),
+    addId: '',
+    saving: false,
+    removingId: null,
+    quickAddingId: null,
+    error: '',
+  });
+  try {
+    const payload = await fetchSubjectPayload(student.id);
+    applySubjectPayload(payload);
+  } catch (e) {
+    subjectModal.value.error = e instanceof Error ? e.message : 'Failed to load subjects';
+  } finally {
+    subjectModal.value.loading = false;
+  }
+}
+
+function csrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+async function addOptionalSubject() {
+  if (!subjectModal.value.student?.id) return;
+  if (!subjectModal.value.addId) {
+    subjectModal.value.error = 'Chagua somo la kuongeza.';
+    return;
+  }
+  subjectModal.value.saving = true;
+  subjectModal.value.error = '';
+  try {
+    const url = route('students.subjects.attach', { student: subjectModal.value.student.id });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': csrfToken(),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ subject_id: subjectModal.value.addId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      subjectModal.value.error = data.message || 'Imeshindikana kuongeza somo.';
+      return;
+    }
+    applySubjectPayload(data);
+    syncListAfterChange();
+    window.__toast && window.__toast('success', 'Somo limeongezwa.');
+  } catch (e) {
+    subjectModal.value.error = e instanceof Error ? e.message : 'Imeshindikana kuongeza somo.';
+  } finally {
+    subjectModal.value.saving = false;
+  }
+}
+
+async function removeOptionalSubject(subjectId) {
+  if (!subjectModal.value.student?.id) return;
+  subjectModal.value.error = '';
+  subjectModal.value.removingId = subjectId;
+  try {
+    const url = route('students.subjects.detach', { student: subjectModal.value.student.id, subject: subjectId });
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': csrfToken(),
+      },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      subjectModal.value.error = data.message || 'Imeshindikana kuondoa somo.';
+      return;
+    }
+    applySubjectPayload(data);
+    syncListAfterChange();
+    window.__toast && window.__toast('success', 'Somo limeondolewa.');
+  } catch (e) {
+    subjectModal.value.error = e instanceof Error ? e.message : 'Imeshindikana kuondoa somo.';
+  } finally {
+    subjectModal.value.removingId = null;
+  }
+}
 
 function onSearchKeydown(e) {
   if (!sug.value.open) return;
@@ -814,6 +1128,7 @@ watch(() => form.value.guardian_phone, (val) => {
                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Full name</th>
                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Sex</th>
                 <th class="px-4 py-3 text-left font-semibold text-gray-700">Class</th>
+                <th class="px-4 py-3 text-left font-semibold text-gray-700">Subjects</th>
                 <th class="px-4 py-3 text-right font-semibold text-gray-700">Action</th>
               </tr>
             </thead>
@@ -825,8 +1140,75 @@ watch(() => form.value.guardian_phone, (val) => {
                   <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">{{ s.sex }}</span>
                 </td>
                 <td class="px-4 py-3 text-gray-700">{{ s.class_name }}</td>
+                <td class="px-4 py-3 text-xs text-gray-700">
+                  <div v-if="classSubjectsForStudent(s).length || assignedOptionalSubjectsForStudent(s).length" class="space-y-2">
+                    <div v-if="classCoreSubjectsForStudent(s).length">
+                      <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Core</div>
+                      <div class="flex flex-wrap gap-1">
+                        <span v-for="sub in classCoreSubjectsForStudent(s)" :key="`core-${s.reg_no}-${sub.id}`" class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                          <span>{{ subjectLabel(sub) }}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div v-if="classElectiveSubjectsForStudent(s).length">
+                      <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-600">Class Optional</div>
+                      <div class="flex flex-wrap gap-1">
+                        <span v-for="sub in classElectiveSubjectsForStudent(s)" :key="`cls-opt-${s.reg_no}-${sub.id}`" class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                          <span>{{ subjectLabel(sub) }}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div v-if="assignedOptionalSubjectsForStudent(s).length">
+                      <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-600">Optional</div>
+                      <div class="flex flex-wrap gap-1">
+                        <span v-for="sub in assignedOptionalSubjectsForStudent(s)" :key="`opt-${s.reg_no}-${sub.id}`" class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                          <span>{{ subjectLabel(sub) }}</span>
+                          <button
+                            type="button"
+                            @click.stop="removeInlineSubject(s, sub)"
+                            :disabled="isInlineRemoving(s.id, sub.id)"
+                            class="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-200/60 text-[10px] text-emerald-900 hover:bg-emerald-300 disabled:opacity-50"
+                            aria-label="Remove subject"
+                          >
+                            <svg v-if="isInlineRemoving(s.id, sub.id)" class="h-3 w-3 animate-spin text-emerald-900" viewBox="0 0 24 24" fill="none">
+                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"></path>
+                            </svg>
+                            <span v-else>×</span>
+                          </button>
+                        </span>
+                      </div>
+                    </div>
+                    <div v-if="inlineRemovedFor(s.id).length" class="space-y-1 border-t border-dashed border-emerald-200 pt-2">
+                      <div class="text-[11px] font-semibold uppercase tracking-wide text-emerald-500">Removed (click to add back)</div>
+                      <div class="flex flex-wrap gap-1">
+                        <button
+                          v-for="sub in inlineRemovedFor(s.id)"
+                          :key="`removed-${s.reg_no}-${sub.id}`"
+                          type="button"
+                          @click.stop="addInlineSubject(s, sub)"
+                          :disabled="isInlineAdding(s.id, sub.id)"
+                          class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-600 hover:bg-emerald-50 disabled:opacity-60"
+                        >
+                          <span class="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-600">Add</span>
+                          <span class="flex items-center gap-1">
+                            <svg v-if="isInlineAdding(s.id, sub.id)" class="h-3 w-3 animate-spin text-emerald-600" viewBox="0 0 24 24" fill="none">
+                              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"></path>
+                            </svg>
+                            <span>{{ subjectName(sub) }}</span>
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="text-[11px] italic text-gray-400">No subjects yet</div>
+                </td>
                 <td class="px-4 py-3">
                   <div class="flex justify-end gap-2">
+                    <button type="button" @click.stop="openSubjects(s)" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-200 hover:bg-amber-100" aria-label="Manage Subjects">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 006.5 22H20"/><path stroke-linecap="round" stroke-linejoin="round" d="M4 4.5A2.5 2.5 0 016.5 2H20v18H6.5A2.5 2.5 0 014 17.5V4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h8M8 10h8M8 14h5"/></svg>
+                    </button>
                     <!-- View -->
                     <button type="button" @click.stop="openDetails(s)" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-200 hover:bg-indigo-100" aria-label="View">
                       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12s-3.75 7.5-9.75 7.5S2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 15a3 3 0 100-6 3 3 0 000 6z"/></svg>
@@ -847,7 +1229,7 @@ watch(() => form.value.guardian_phone, (val) => {
                 </td>
               </tr>
               <tr v-if="(students.data || []).length === 0">
-                <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">No students found.</td>
+                <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500">No students found.</td>
               </tr>
             </tbody>
           </table>
@@ -861,6 +1243,7 @@ watch(() => form.value.guardian_phone, (val) => {
                     <th class="px-4 py-3 text-left font-semibold text-gray-700">Reg_No</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-700">Full name</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-700">Sex</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Subjects</th>
                     <th class="px-4 py-3 text-right font-semibold text-gray-700">Action</th>
                   </tr>
                 </thead>
@@ -871,8 +1254,65 @@ watch(() => form.value.guardian_phone, (val) => {
                     <td class="px-4 py-3">
                       <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">{{ s.sex }}</span>
                     </td>
+                    <td class="px-4 py-3 text-xs text-gray-700">
+                      <div v-if="classSubjectsForStudent(s).length || assignedOptionalSubjectsForStudent(s).length" class="space-y-2">
+                        <div v-if="classCoreSubjectsForStudent(s).length">
+                          <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Core</div>
+                          <div class="flex flex-wrap gap-1">
+                            <span v-for="sub in classCoreSubjectsForStudent(s)" :key="`group-core-${s.reg_no}-${sub.id}`" class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                              {{ subjectLabel(sub) }}
+                            </span>
+                          </div>
+                        </div>
+                        <div v-if="classElectiveSubjectsForStudent(s).length">
+                          <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-600">Class Optional</div>
+                          <div class="flex flex-wrap gap-1">
+                            <span v-for="sub in classElectiveSubjectsForStudent(s)" :key="`group-cls-opt-${s.reg_no}-${sub.id}`" class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                              <span>{{ subjectLabel(sub) }}</span>
+                            </span>
+                          </div>
+                        </div>
+                        <div v-if="assignedOptionalSubjectsForStudent(s).length">
+                          <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-600">Optional</div>
+                          <div class="flex flex-wrap gap-1">
+                            <span v-for="sub in assignedOptionalSubjectsForStudent(s)" :key="`group-opt-${s.reg_no}-${sub.id}`" class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                              <span>{{ subjectLabel(sub) }}</span>
+                              <button type="button" @click.stop="removeInlineSubject(s, sub)" :disabled="isInlineRemoving(s.id, sub.id)" class="rounded-full bg-emerald-200/60 p-0.5 text-[10px] text-emerald-900 hover:bg-emerald-300 disabled:opacity-50">
+                                ×
+                              </button>
+                            </span>
+                          </div>
+                        </div>
+                        <div v-if="inlineRemovedFor(s.id).length" class="space-y-1 border-t border-dashed border-emerald-200 pt-2">
+                          <div class="text-[11px] font-semibold uppercase tracking-wide text-emerald-500">Removed (click to add back)</div>
+                          <div class="flex flex-wrap gap-1">
+                            <button
+                              v-for="sub in inlineRemovedFor(s.id)"
+                              :key="`group-removed-${s.reg_no}-${sub.id}`"
+                              type="button"
+                              @click.stop="addInlineSubject(s, sub)"
+                              :disabled="isInlineAdding(s.id, sub.id)"
+                              class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-600 hover:bg-emerald-50 disabled:opacity-60"
+                            >
+                              <span class="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-600">Add</span>
+                              <span class="flex items-center gap-1">
+                                <svg v-if="isInlineAdding(s.id, sub.id)" class="h-3 w-3 animate-spin text-emerald-600" viewBox="0 0 24 24" fill="none">
+                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"></path>
+                                </svg>
+                                <span>{{ subjectName(sub) }}</span>
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-else class="text-[11px] italic text-gray-400">No subjects yet</div>
+                    </td>
                     <td class="px-4 py-3">
                       <div class="flex justify-end gap-2">
+                        <button type="button" @click.stop="openSubjects(s)" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-200 hover:bg-amber-100" aria-label="Manage Subjects">
+                          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 006.5 22H20"/><path stroke-linecap="round" stroke-linejoin="round" d="M4 4.5A2.5 2.5 0 016.5 2H20v18H6.5A2.5 2.5 0 014 17.5V4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h8M8 10h8M8 14h5"/></svg>
+                        </button>
                         <button type="button" @click.stop="openDetails(s)" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-200 hover:bg-indigo-100" aria-label="View">
                           <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12s-3.75 7.5-9.75 7.5S2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 15a3 3 0 100-6 3 3 0 000 6z"/></svg>
                         </button>
@@ -908,6 +1348,76 @@ watch(() => form.value.guardian_phone, (val) => {
             ]"
             v-html="link.label"
           />
+        </div>
+      </div>
+
+      <!-- Subjects Modal -->
+      <div v-if="subjectModal.open" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40" @click="closeSubjects"></div>
+        <div class="relative z-10 w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-xl">
+          <div class="flex items-center justify-between border-b px-5 py-3">
+            <div>
+              <div class="text-base font-semibold text-gray-800">Manage Subjects</div>
+              <div class="text-xs text-gray-500">
+                {{ subjectModal.student?.name }} • {{ subjectModal.student?.reg_no }} • {{ subjectModal.student?.class_name || 'No class' }}
+              </div>
+            </div>
+            <button @click="closeSubjects" class="rounded-md p-1 text-gray-500 hover:bg-gray-100" aria-label="Close">
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="grid gap-5 p-5 md:grid-cols-2">
+            <div>
+              <div class="mb-2 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-800">Class Core Subjects</h3>
+                <span v-if="subjectModal.loading" class="text-xs text-gray-500">Loading…</span>
+              </div>
+              <div class="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs text-gray-700">
+                <div v-if="subjectModal.core.length" class="flex flex-wrap gap-1">
+                  <span v-for="sub in subjectModal.core" :key="`modal-core-${sub.id}`" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                    <span class="mr-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500">CORE</span>
+                    {{ subjectCode(sub) }}
+                  </span>
+                </div>
+                <div v-else class="text-[11px] italic text-gray-400">No core subjects detected for this class.</div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div class="rounded-lg border border-gray-100 p-3">
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h3 class="text-sm font-semibold text-gray-800">Add Optional Subject</h3>
+                  <div v-if="subjectModal.error" class="text-xs text-rose-600">{{ subjectModal.error }}</div>
+                </div>
+                <div class="flex flex-col gap-3 sm:flex-row">
+                  <select v-model="subjectModal.addId" :disabled="subjectModal.saving || subjectModal.loading" class="flex-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-emerald-600 focus:ring-emerald-600">
+                    <option value="">Chagua somo</option>
+                    <option v-for="sub in subjectModal.available" :key="sub.id" :value="String(sub.id)">
+                      {{ subjectCode(sub) }} — {{ sub.name }}
+                    </option>
+                  </select>
+                  <button type="button" @click="addOptionalSubject" :disabled="subjectModal.saving || subjectModal.loading" class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
+                    {{ subjectModal.saving ? 'Saving…' : 'Add Subject' }}
+                  </button>
+                </div>
+                <p v-if="!subjectModal.available.length" class="mt-2 text-xs text-gray-500">Hakuna masomo ya ziada yaliyobaki. Jaribu kuondoa ili kubadilisha.</p>
+              </div>
+              <div class="rounded-lg border border-gray-100">
+                <div class="border-b px-4 py-2 text-sm font-semibold text-gray-800">Optional Subjects</div>
+                <div v-if="subjectModal.optional.length" class="max-h-64 overflow-auto divide-y divide-gray-100 text-sm">
+                  <div v-for="sub in subjectModal.optional" :key="`modal-opt-${sub.id}`" class="flex items-center justify-between gap-3 px-4 py-2">
+                    <div>
+                      <div class="font-medium text-gray-800">{{ subjectCode(sub) }}</div>
+                      <div class="text-xs text-gray-500">{{ sub.name }}</div>
+                    </div>
+                    <button type="button" @click="removeOptionalSubject(sub.id)" :disabled="subjectModal.removingId === sub.id" class="inline-flex items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60">
+                      {{ subjectModal.removingId === sub.id ? 'Removing…' : 'Remove' }}
+                    </button>
+                  </div>
+                </div>
+                <div v-else class="p-4 text-xs text-gray-500">Haujachagua somo la ziada bado.</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

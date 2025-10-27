@@ -10,7 +10,7 @@ import 'flowbite';
 const appName = import.meta.env.VITE_APP_NAME || 'Result management system';
 
 createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    title: (title) => (title ? title : appName),
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.vue`,

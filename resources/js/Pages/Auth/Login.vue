@@ -6,7 +6,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import Alert from '@/Components/Alert.vue';
 
 defineProps({
@@ -25,6 +25,10 @@ const form = useForm({
 });
 
 const showPassword = ref(false);
+const isAdminLogin = computed(() => {
+    const email = form.email.toLowerCase().trim();
+    return email === 'admin' || email === 'admin@rsms.com';
+});
 
 const submit = () => {
     form.post(route('login'), {
@@ -41,6 +45,22 @@ const submit = () => {
 
         <form @submit.prevent="submit" class="sm:rounded-xl">
             <h1 class="mb-6 text-center text-2xl font-semibold text-gray-800">Welcome back</h1>
+            
+            <!-- Admin Login Indicator -->
+            <div v-if="isAdminLogin" class="mb-4 rounded-lg border-2 border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 p-4 shadow-md">
+                <div class="flex items-center gap-3">
+                    <div class="rounded-full bg-gradient-to-br from-blue-600 to-blue-800 p-2 shadow-sm">
+                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-bold text-blue-900">Admin Login Detected</p>
+                        <p class="text-sm font-medium text-blue-700">You will be redirected to the Admin Dashboard</p>
+                    </div>
+                </div>
+            </div>
+
             <div>
                 <InputLabel for="email" value="Email or Username" />
 
@@ -48,6 +68,7 @@ const submit = () => {
                     id="email"
                     type="text"
                     class="mt-1 block w-full"
+                    :class="{ 'border-blue-400 focus:border-blue-600 focus:ring-blue-500 bg-blue-50': isAdminLogin }"
                     v-model="form.email"
                     required
                     autofocus
@@ -101,7 +122,7 @@ const submit = () => {
             <div class="mt-6 space-y-3">
                 <PrimaryButton
                     class="w-full justify-center"
-                    :class="{ 'opacity-25': form.processing }"
+                    :class="{ 'opacity-25': form.processing, 'bg-gradient-to-r from-blue-700 to-blue-900 hover:from-blue-800 hover:to-blue-950 focus:from-blue-800 focus:to-blue-950 active:from-blue-900 active:to-blue-950 shadow-lg': isAdminLogin }"
                     :disabled="form.processing"
                 >
                     <span v-if="form.processing" class="inline-flex items-center gap-2">
@@ -111,8 +132,11 @@ const submit = () => {
                         </svg>
                         Processing...
                     </span>
-                    <span v-else>
-                        Log in
+                    <span v-else class="inline-flex items-center gap-2">
+                        <svg v-if="isAdminLogin" class="h-5 w-5 text-yellow-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        {{ isAdminLogin ? 'Login as Admin' : 'Log in' }}
                     </span>
                 </PrimaryButton>
 

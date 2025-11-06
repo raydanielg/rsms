@@ -56,10 +56,9 @@ class EmasSubjectSeeder extends Seeder
         ];
 
         foreach ($subjects as $subject) {
-            EmasSubject::updateOrCreate(
-                ['code' => $subject['code']],
-                $subject
-            );
+            EmasSubject::create($subject);
         }
+
+        $this->command->info('✓ ' . count($subjects) . ' subjects created successfully!');
     }
 }

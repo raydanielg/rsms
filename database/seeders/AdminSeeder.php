@@ -13,33 +13,23 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        // Check if admin already exists
-        $adminExists = DB::table('users')
-            ->where('username', 'admin')
-            ->orWhere('email', 'admin@rsms.com')
-            ->exists();
+        DB::table('users')->insert([
+            'name' => 'System Administrator',
+            'username' => 'admin',
+            'email' => 'admin@rsms.com',
+            'phone' => '255700000000',
+            'region' => 'System',
+            'school_name' => 'System Administration',
+            'school_number' => 'ADMIN',
+            'password' => Hash::make('admin'),
+            'role' => 'admin',
+            'email_verified_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        if (!$adminExists) {
-            DB::table('users')->insert([
-                'name' => 'System Administrator',
-                'username' => 'admin',
-                'email' => 'admin@rsms.com',
-                'phone' => '255700000000',
-                'region' => 'System',
-                'school_name' => 'System Administration',
-                'school_number' => 'ADMIN',
-                'password' => Hash::make('admin'),
-                'role' => 'admin',
-                'email_verified_at' => now(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            $this->command->info('Admin user created successfully!');
-            $this->command->info('Username: admin');
-            $this->command->info('Password: admin');
-        } else {
-            $this->command->warn('Admin user already exists!');
-        }
+        $this->command->info('Admin user created successfully!');
+        $this->command->info('Username: admin');
+        $this->command->info('Password: admin');
     }
 }

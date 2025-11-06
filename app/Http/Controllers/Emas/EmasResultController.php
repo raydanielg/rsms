@@ -6,20 +6,78 @@ use App\Http\Controllers\Controller;
 use App\Models\EmasResult;
 use App\Models\EmasExam;
 use App\Models\EmasCandidate;
+use App\Models\EmasCenter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class EmasResultController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $results = EmasResult::with(['exam', 'candidate'])
-            ->latest()
-            ->paginate(10);
+        $query = EmasCenter::withCount('candidates');
+
+        // Filter by region
+        if ($request->filled('region')) {
+            $query->where('region', $request->region);
+        }
+
+        // Search by center name or code
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('center_name', 'like', "%{$search}%")
+                  ->orWhere('center_code', 'like', "%{$search}%")
+                  ->orWhere('district', 'like', "%{$search}%");
+            });
+        }
+
+        $centers = $query->latest()->paginate(12)->withQueryString();
+
+        // Get statistics for each center with results
+        $centers->getCollection()->transform(function($center) {
+            // Count results for this center
+            $resultsCount = EmasResult::whereHas('candidate', function($q) use ($center) {
+                $q->where('exam_center_code', $center->center_code);
+            })->count();
+
+            // Get average score for this center
+            $avgScore = EmasResult::whereHas('candidate', function($q) use ($center) {
+                $q->where('exam_center_code', $center->center_code);
+            })->avg('score');
+
+            // Count exams for this center
+            $examsCount = EmasExam::whereHas('candidates', function($q) use ($center) {
+                $q->where('exam_center_code', $center->center_code);
+            })->count();
+
+            $center->results_count = $resultsCount;
+            $center->average_score = $avgScore ? round($avgScore, 1) : 0;
+            $center->exams_count = $examsCount;
+
+            return $center;
+        });
+
+        // Overall statistics
+        $stats = [
+            'total_centers' => EmasCenter::count(),
+            'total_results' => EmasResult::count(),
+            'total_candidates' => \App\Models\EmasCandidate::count(),
+            'regions_count' => EmasCenter::distinct('region')->count('region'),
+        ];
+
+        // Get all regions used in centers
+        $usedRegions = EmasCenter::distinct('region')
+            ->pluck('region')
+            ->sort()
+            ->values()
+            ->toArray();
 
         return Inertia::render('Emas/Results/Index', [
-            'results' => $results,
+            'centers' => $centers,
+            'stats' => $stats,
+            'usedRegions' => $usedRegions,
+            'filters' => $request->only(['search', 'region']),
         ]);
     }
 
@@ -70,12 +128,71 @@ class EmasResultController extends Controller
             ->with('success', 'Results uploaded successfully!');
     }
 
-    public function show(EmasResult $result): Response
+    public function show(EmasCenter $center): Response
     {
-        $result->load(['exam', 'candidate', 'uploader']);
+        // Load candidates with their results
+        $candidates = $center->candidates()->with(['results.exam'])->latest()->paginate(50);
 
-        return Inertia::render('Emas/Results/Show', [
-            'result' => $result,
+        // Transform candidates to include calculated fields
+        $candidates->getCollection()->transform(function($candidate) {
+            // Get all results for this candidate
+            $results = [];
+            $totalScore = 0;
+            $subjectCount = 0;
+            
+            foreach($candidate->results as $result) {
+                $subjectName = $result->exam->subject ?? 'Unknown';
+                $results[$subjectName] = [
+                    'score' => $result->score,
+                    'grade' => $result->grade,
+                ];
+                $totalScore += $result->score;
+                $subjectCount++;
+            }
+            
+            $candidate->results = $results;
+            $candidate->total_score = $totalScore;
+            $candidate->average_score = $subjectCount > 0 ? round($totalScore / $subjectCount, 1) : 0;
+            
+            // Calculate division based on average
+            $avg = $candidate->average_score;
+            if ($avg >= 75) $candidate->division = 'I';
+            elseif ($avg >= 65) $candidate->division = 'II';
+            elseif ($avg >= 50) $candidate->division = 'III';
+            elseif ($avg >= 40) $candidate->division = 'IV';
+            else $candidate->division = '0';
+            
+            $candidate->full_name = trim(($candidate->first_name ?? '') . ' ' . ($candidate->middle_name ?? '') . ' ' . ($candidate->last_name ?? ''));
+            
+            return $candidate;
+        });
+
+        // Get all active subjects from the subjects table
+        $subjects = \App\Models\EmasSubject::where('status', 'active')
+            ->orderBy('name')
+            ->pluck('name')
+            ->toArray();
+
+        // Get all exams for this center
+        $exams = EmasExam::whereHas('candidates', function($q) use ($center) {
+            $q->where('exam_center_code', $center->center_code);
+        })->get();
+
+        // Calculate statistics
+        $stats = [
+            'total_candidates' => $center->candidates()->count(),
+            'total_exams' => $exams->count(),
+            'average_score' => EmasResult::whereHas('candidate', function($q) use ($center) {
+                $q->where('exam_center_code', $center->center_code);
+            })->avg('score'),
+        ];
+
+        return Inertia::render('Emas/Results/SchoolResults', [
+            'center' => $center,
+            'candidates' => $candidates,
+            'subjects' => $subjects,
+            'stats' => $stats,
+            'exams' => $exams,
         ]);
     }
 

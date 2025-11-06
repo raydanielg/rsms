@@ -43,9 +43,9 @@ const menu = [
   },
   {
     label: 'Reports', icon: 'chart', children: [
-      { label: 'Teachers Reports' },
-      { label: 'Students Reports' },
-      { label: 'School Report' },
+      { label: 'Teachers Reports', route: 'reports.teachers' },
+      { label: 'Students Reports', route: 'reports.students' },
+      { label: 'School Report', route: 'reports.school' },
     ]
   },
   {

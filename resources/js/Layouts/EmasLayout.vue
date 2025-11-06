@@ -6,6 +6,31 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import { Link } from '@inertiajs/vue3';
 
 const mobileSidebarOpen = ref(false);
+const sidebarCollapsed = ref(false);
+
+const toggleSidebar = () => {
+    sidebarCollapsed.value = !sidebarCollapsed.value;
+};
+
+// Collapsible menu groups
+const openGroups = ref({
+    'exams': true,  // Open by default
+    'centers': false,
+    'candidates': false,
+    'subjects': false,
+    'results': false,
+    'reports': false,
+    'markers': false,
+    'system': false,
+});
+
+const toggleGroup = (groupKey) => {
+    openGroups.value[groupKey] = !openGroups.value[groupKey];
+};
+
+const isGroupOpen = (groupKey) => {
+    return openGroups.value[groupKey];
+};
 
 // Global toast handling
 const page = usePage();
@@ -113,12 +138,35 @@ watch(flash, (newFlash) => {
 
             <!-- Page Content with Sidebar -->
             <main>
+                <!-- Toggle Sidebar Button (Desktop) -->
+                <button 
+                    @click="toggleSidebar"
+                    class="hidden sm:flex fixed left-0 top-20 z-50 items-center justify-center w-8 h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-r-lg shadow-lg transition-all duration-300 group"
+                    :style="{ left: sidebarCollapsed ? '0px' : '256px' }"
+                    :title="sidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'"
+                >
+                    <svg class="w-5 h-5 transition-transform duration-300" :class="{ 'rotate-180': sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    <!-- Tooltip -->
+                    <span class="absolute left-full ml-2 px-3 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        {{ sidebarCollapsed ? 'Show Sidebar (Expand)' : 'Hide Sidebar (Collapse)' }}
+                    </span>
+                </button>
+
                 <!-- Mobile Overlay -->
                 <div v-if="mobileSidebarOpen" @click="mobileSidebarOpen = false" class="fixed inset-0 z-30 bg-gray-900/50 backdrop-blur-sm sm:hidden" style="top: 64px;"></div>
                 
                 <!-- Sidebar -->
-                <div class="fixed left-0 z-40 w-64 transform bg-white shadow-lg transition-transform duration-300 ease-in-out" :class="mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'" style="top: 64px; bottom: 0;">
-                    <div class="flex h-full flex-col">
+                <div 
+                    class="fixed left-0 z-40 transform bg-white shadow-lg transition-all duration-300 ease-in-out" 
+                    :class="[
+                        mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0',
+                        sidebarCollapsed ? 'sm:w-0 sm:-translate-x-full' : 'w-64'
+                    ]" 
+                    style="top: 64px; bottom: 0;"
+                >
+                    <div class="flex h-full flex-col" :class="{ 'opacity-0': sidebarCollapsed }">
                         <!-- Close button for mobile -->
                         <div class="flex items-center justify-between border-b p-4 sm:hidden">
                             <span class="text-lg font-semibold text-gray-800">EMAS Menu</span>
@@ -140,8 +188,13 @@ watch(flash, (newFlash) => {
 
                             <!-- Exams Management -->
                             <div class="pt-4">
-                                <p class="px-4 text-xs font-semibold uppercase tracking-wider text-emerald-600">Exams Management</p>
-                                <div class="mt-2 space-y-1">
+                                <button @click="toggleGroup('exams')" class="flex w-full items-center justify-between rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 hover:bg-emerald-50 transition-colors">
+                                    <span>Exams Management</span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-90': isGroupOpen('exams') }" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div v-show="isGroupOpen('exams')" class="mt-2 space-y-1">
                                     <Link :href="route('emas.exams.index')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -165,28 +218,61 @@ watch(flash, (newFlash) => {
 
                             <!-- Centers & Venues -->
                             <div class="pt-4">
-                                <p class="px-4 text-xs font-semibold uppercase tracking-wider text-emerald-600">Centers & Venues</p>
-                                <div class="mt-2 space-y-1">
+                                <button @click="toggleGroup('centers')" class="flex w-full items-center justify-between rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 hover:bg-emerald-50 transition-colors">
+                                    <span>Centers & Venues</span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-90': isGroupOpen('centers') }" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div v-show="isGroupOpen('centers')" class="mt-2 space-y-1">
                                     <Link :href="route('emas.centers.index')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                         </svg>
                                         Exam Centers
                                     </Link>
-                                    <Link :href="route('emas.centers.index')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+                                    <Link :href="route('emas.coordinators.index')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                                         </svg>
-                                        Locations
+                                        Wasimamizi
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <!-- Schools Registration -->
+                            <div class="pt-4">
+                                <button @click="toggleGroup('schools')" class="flex w-full items-center justify-between rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 hover:bg-emerald-50 transition-colors">
+                                    <span>Schools Registration</span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-90': isGroupOpen('schools') }" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div v-show="isGroupOpen('schools')" class="mt-2 space-y-1">
+                                    <Link :href="route('emas.schools.index')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                        All Schools
+                                    </Link>
+                                    <Link :href="route('emas.schools.register')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Register School
                                     </Link>
                                 </div>
                             </div>
 
                             <!-- Candidates -->
                             <div class="pt-4">
-                                <p class="px-4 text-xs font-semibold uppercase tracking-wider text-emerald-600">Candidates</p>
-                                <div class="mt-2 space-y-1">
+                                <button @click="toggleGroup('candidates')" class="flex w-full items-center justify-between rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 hover:bg-emerald-50 transition-colors">
+                                    <span>Candidates</span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-90': isGroupOpen('candidates') }" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div v-show="isGroupOpen('candidates')" class="mt-2 space-y-1">
                                     <Link :href="route('emas.candidates.index')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -202,29 +288,51 @@ watch(flash, (newFlash) => {
                                 </div>
                             </div>
 
+                            <!-- Subjects -->
+                            <div class="pt-4">
+                                <button @click="toggleGroup('subjects')" class="flex w-full items-center justify-between rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 hover:bg-emerald-50 transition-colors">
+                                    <span>Masomo</span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-90': isGroupOpen('subjects') }" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div v-show="isGroupOpen('subjects')" class="mt-2 space-y-1">
+                                    <Link :href="route('emas.subjects.index')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                        </svg>
+                                        Masomo
+                                    </Link>
+                                </div>
+                            </div>
+
                             <!-- Results -->
                             <div class="pt-4">
-                                <p class="px-4 text-xs font-semibold uppercase tracking-wider text-emerald-600">Results</p>
-                                <div class="mt-2 space-y-1">
+                                <button @click="toggleGroup('results')" class="flex w-full items-center justify-between rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 hover:bg-emerald-50 transition-colors">
+                                    <span>Matokeo</span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-90': isGroupOpen('results') }" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div v-show="isGroupOpen('results')" class="mt-2 space-y-1">
                                     <Link :href="route('emas.results.index')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                                         </svg>
-                                        View Results
-                                    </Link>
-                                    <Link :href="route('emas.results.upload')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
-                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                        </svg>
-                                        Upload Results
+                                        Matokeo ya Shule
                                     </Link>
                                 </div>
                             </div>
 
                             <!-- Reports -->
                             <div class="pt-4">
-                                <p class="px-4 text-xs font-semibold uppercase tracking-wider text-emerald-600">Reports</p>
-                                <div class="mt-2 space-y-1">
+                                <button @click="toggleGroup('reports')" class="flex w-full items-center justify-between rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 hover:bg-emerald-50 transition-colors">
+                                    <span>Reports</span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-90': isGroupOpen('reports') }" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div v-show="isGroupOpen('reports')" class="mt-2 space-y-1">
                                     <Link :href="route('emas.reports.index')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -242,8 +350,13 @@ watch(flash, (newFlash) => {
 
                             <!-- Markers -->
                             <div class="pt-4">
-                                <p class="px-4 text-xs font-semibold uppercase tracking-wider text-emerald-600">Markers</p>
-                                <div class="mt-2 space-y-1">
+                                <button @click="toggleGroup('markers')" class="flex w-full items-center justify-between rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 hover:bg-emerald-50 transition-colors">
+                                    <span>Markers</span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-90': isGroupOpen('markers') }" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div v-show="isGroupOpen('markers')" class="mt-2 space-y-1">
                                     <Link :href="route('emas.markers.index')" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -267,8 +380,13 @@ watch(flash, (newFlash) => {
 
                             <!-- System -->
                             <div class="pt-4">
-                                <p class="px-4 text-xs font-semibold uppercase tracking-wider text-emerald-600">System</p>
-                                <div class="mt-2 space-y-1">
+                                <button @click="toggleGroup('system')" class="flex w-full items-center justify-between rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 hover:bg-emerald-50 transition-colors">
+                                    <span>System</span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-90': isGroupOpen('system') }" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div v-show="isGroupOpen('system')" class="mt-2 space-y-1">
                                     <Link href="#" class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -288,7 +406,10 @@ watch(flash, (newFlash) => {
                 </div>
 
                 <!-- Main Content Area -->
-                <div class="min-h-[calc(100vh-4rem)] flex-1 pt-4 sm:ml-64">
+                <div 
+                    class="min-h-[calc(100vh-4rem)] flex-1 pt-4 transition-all duration-300" 
+                    :class="sidebarCollapsed ? 'sm:ml-0' : 'sm:ml-64'"
+                >
                     <div class="p-3 sm:p-4">
                         <div class="min-h-[70vh] rounded-xl bg-white/90 p-4 shadow-sm ring-1 ring-black/5">
                             <slot />
@@ -320,3 +441,40 @@ watch(flash, (newFlash) => {
         </div>
     </div>
 </template>
+
+<style>
+@media print {
+    /* Hide sidebar, navigation, and UI elements */
+    .sidebar,
+    nav,
+    aside,
+    header,
+    .menu-toggle,
+    .user-menu,
+    button:not(.print-only),
+    [aria-label="Sidebar"],
+    .fixed.inset-y-0,
+    .pointer-events-none {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Main content should take full width */
+    main {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+    
+    /* Remove backgrounds and shadows */
+    body {
+        background: white !important;
+    }
+    
+    .bg-white\/90,
+    .shadow-sm,
+    .ring-1 {
+        background: white !important;
+        box-shadow: none !important;
+    }
+}
+</style>

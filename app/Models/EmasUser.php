@@ -21,6 +21,7 @@ class EmasUser extends Authenticatable
         'center_code',
         'district',
         'region',
+        'assigned_subjects',
         'password',
     ];
 
@@ -34,6 +35,7 @@ class EmasUser extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'assigned_subjects' => 'array',
         ];
     }
 
@@ -59,5 +61,53 @@ class EmasUser extends Authenticatable
     public function isSupervisor(): bool
     {
         return $this->role === 'supervisor';
+    }
+
+    /**
+     * Check if user is marker (marks entry personnel)
+     */
+    public function isMarker(): bool
+    {
+        return $this->role === 'marker';
+    }
+
+    /**
+     * Get role display name
+     */
+    public function getRoleDisplayName(): string
+    {
+        return match($this->role) {
+            'coordinator' => 'Coordinator',
+            'supervisor' => 'Supervisor',
+            'examiner' => 'Examiner',
+            'marker' => 'Marks Entry Personnel',
+            default => 'User',
+        };
+    }
+
+    /**
+     * Check if marker is assigned to a specific subject
+     */
+    public function canMarkSubject(string $subject): bool
+    {
+        if (!$this->isMarker()) {
+            return false;
+        }
+
+        // If no subjects assigned, can mark all subjects
+        if (empty($this->assigned_subjects)) {
+            return true;
+        }
+
+        // Check if subject is in assigned subjects
+        return in_array($subject, $this->assigned_subjects);
+    }
+
+    /**
+     * Get list of assigned subjects
+     */
+    public function getAssignedSubjects(): array
+    {
+        return $this->assigned_subjects ?? [];
     }
 }

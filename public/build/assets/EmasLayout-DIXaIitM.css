@@ -1,0 +1,1 @@
+@media print{.sidebar,nav,aside,header,.menu-toggle,.user-menu,button:not(.print-only),[aria-label=Sidebar],.fixed.inset-y-0,.pointer-events-none{display:none!important;visibility:hidden!important}main{margin-left:0!important;width:100%!important}body{background:#fff!important}.bg-white\/90,.shadow-sm,.ring-1{background:#fff!important;box-shadow:none!important}}

@@ -15,6 +15,7 @@ class EmasCandidate extends Model
         'first_name',
         'middle_name',
         'last_name',
+        'full_name',
         'date_of_birth',
         'gender',
         'registration_number',

@@ -40,7 +40,10 @@ class EmasAuthController extends Controller
             'password' => $request->password
         ], $request->boolean('remember'))) {
             $request->session()->regenerate();
-            return redirect()->intended(route('emas.dashboard'));
+            
+            // Role-based redirection
+            $user = Auth::guard('emas')->user();
+            return redirect()->intended($this->getRedirectRoute($user));
         }
 
         return back()->withErrors([
@@ -86,7 +89,7 @@ class EmasAuthController extends Controller
 
         Auth::guard('emas')->login($user);
 
-        return redirect()->route('emas.dashboard');
+        return redirect($this->getRedirectRoute($user));
     }
 
     /**
@@ -100,5 +103,22 @@ class EmasAuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('emas.login');
+    }
+
+    /**
+     * Get redirect route based on user role
+     */
+    protected function getRedirectRoute($user): string
+    {
+        if ($user->isMarker()) {
+            return route('emas.marker.dashboard');
+        }
+
+        if ($user->isCoordinator() || $user->isSupervisor()) {
+            return route('emas.dashboard');
+        }
+
+        // Default for examiners and others
+        return route('emas.dashboard');
     }
 }

@@ -16,6 +16,7 @@ class EmasMarker extends Model
         'email',
         'phone',
         'marker_code',
+        'center_id',
         'subjects',
         'district',
         'region',
@@ -41,6 +42,11 @@ class EmasMarker extends Model
         return $this->belongsToMany(EmasExam::class, 'emas_marker_assignments', 'marker_id', 'exam_id')
                     ->withPivot('papers_assigned', 'papers_marked', 'papers_pending', 'status')
                     ->withTimestamps();
+    }
+
+    public function center()
+    {
+        return $this->belongsTo(EmasCenter::class, 'center_id');
     }
 
     public function canMarkSubject(string $subject): bool

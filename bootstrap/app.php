@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'emas' => \App\Http\Middleware\EmasMiddleware::class,
+            'emas.marker' => \App\Http\Middleware\EmasMarkerMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -14,305 +14,110 @@ const selectedPeriod = ref('monthly');
     <EmasLayout>
         <div class="space-y-6">
             <!-- Header -->
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-                    <p class="mt-1 text-sm text-gray-600">Generate and view examination reports</p>
-                </div>
-                <button class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    Export Report
-                </button>
+            <div class="mb-8">
+                <h1 class="text-3xl font-black text-gray-900">Reports & Analytics</h1>
+                <p class="mt-2 text-base text-gray-600">Select a report type to view detailed examination analysis</p>
             </div>
 
             <!-- Report Types -->
-            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <div class="rounded-lg bg-white p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer border-2 border-transparent hover:border-emerald-500">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100">
-                            <svg class="h-6 w-6 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <!-- General Reports -->
+                <Link href="#" class="rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                            <svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                             </svg>
                         </div>
-                    </div>
-                    <h3 class="font-semibold text-gray-900">Performance Report</h3>
-                    <p class="mt-1 text-sm text-gray-500">Overall exam performance analysis</p>
-                </div>
-
-                <div class="rounded-lg bg-white p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer border-2 border-transparent hover:border-blue-500">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
-                            <svg class="h-6 w-6 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                            </svg>
+                        <div class="rounded-full bg-white/20 px-3 py-1">
+                            <span class="text-xs font-bold text-white">Overall</span>
                         </div>
                     </div>
-                    <h3 class="font-semibold text-gray-900">Candidate Report</h3>
-                    <p class="mt-1 text-sm text-gray-500">Individual candidate statistics</p>
-                </div>
+                    <h3 class="text-xl font-black text-white mb-2">General Reports</h3>
+                    <p class="text-sm text-emerald-50">Overall examination statistics and performance summary</p>
+                </Link>
 
-                <div class="rounded-lg bg-white p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer border-2 border-transparent hover:border-purple-500">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
-                            <svg class="h-6 w-6 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <!-- Schools Reports -->
+                <Link href="#" class="rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                            <svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                             </svg>
                         </div>
+                        <div class="rounded-full bg-white/20 px-3 py-1">
+                            <span class="text-xs font-bold text-white">Schools</span>
+                        </div>
                     </div>
-                    <h3 class="font-semibold text-gray-900">Center Report</h3>
-                    <p class="mt-1 text-sm text-gray-500">Center-wise performance data</p>
-                </div>
+                    <h3 class="text-xl font-black text-white mb-2">Schools Reports</h3>
+                    <p class="text-sm text-blue-50">Individual school performance and detailed analysis</p>
+                </Link>
 
-                <div class="rounded-lg bg-white p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer border-2 border-transparent hover:border-amber-500">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100">
-                            <svg class="h-6 w-6 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                <!-- Schools Ranks (Top 10) -->
+                <Link :href="route('emas.reports.school-ranks')" class="rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                            <svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                             </svg>
                         </div>
+                        <div class="rounded-full bg-white/20 px-3 py-1">
+                            <span class="text-xs font-bold text-white">Top 10</span>
+                        </div>
                     </div>
-                    <h3 class="font-semibold text-gray-900">Subject Analysis</h3>
-                    <p class="mt-1 text-sm text-gray-500">Subject-wise performance trends</p>
-                </div>
+                    <h3 class="text-xl font-black text-white mb-2">Schools Rankings</h3>
+                    <p class="text-sm text-amber-50">Top 10 best performing schools and rankings</p>
+                </Link>
+
+                <!-- Top Students -->
+                <Link :href="route('emas.reports.top-students-filters')" class="rounded-xl bg-gradient-to-br from-red-500 to-pink-600 p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                            <svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                            </svg>
+                        </div>
+                        <div class="rounded-full bg-white/20 px-3 py-1">
+                            <span class="text-xs font-bold text-white">Top 10</span>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-black text-white mb-2">Top Students</h3>
+                    <p class="text-sm text-red-50">Best & weak students rankings with detailed analysis</p>
+                </Link>
+
+                <!-- Ward Ranks -->
+                <Link :href="route('emas.reports.ward-filters')" class="rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                            <svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                            </svg>
+                        </div>
+                        <div class="rounded-full bg-white/20 px-3 py-1">
+                            <span class="text-xs font-bold text-white">Location</span>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-black text-white mb-2">Ward Rankings</h3>
+                    <p class="text-sm text-purple-50">Performance comparison across different wards</p>
+                </Link>
+
+                <!-- Subject Statistics -->
+                <Link :href="route('emas.reports.subject-statistics')" class="rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                            <svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                            </svg>
+                        </div>
+                        <div class="rounded-full bg-white/20 px-3 py-1">
+                            <span class="text-xs font-bold text-white">Subjects</span>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-black text-white mb-2">Subject Statistics</h3>
+                    <p class="text-sm text-teal-50">Subject-wise performance analysis and trends</p>
+                </Link>
             </div>
 
-            <!-- Report Generator -->
-            <div class="rounded-lg bg-white p-6 shadow-sm">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Generate Custom Report</h2>
-                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
-                        <select v-model="selectedReportType" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-                            <option value="">Select Type</option>
-                            <option value="performance">Performance Report</option>
-                            <option value="candidate">Candidate Report</option>
-                            <option value="center">Center Report</option>
-                            <option value="subject">Subject Analysis</option>
-                            <option value="comparative">Comparative Analysis</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Exam</label>
-                        <select v-model="selectedExam" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-                            <option value="">All Exams</option>
-                            <option value="1">Mathematics Final</option>
-                            <option value="2">English Language</option>
-                            <option value="3">Physics Practical</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Period</label>
-                        <select v-model="selectedPeriod" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-                            <option value="weekly">This Week</option>
-                            <option value="monthly">This Month</option>
-                            <option value="quarterly">This Quarter</option>
-                            <option value="yearly">This Year</option>
-                            <option value="custom">Custom Range</option>
-                        </select>
-                    </div>
-
-                    <div class="flex items-end">
-                        <button class="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors">
-                            Generate Report
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Statistics Overview -->
-            <div class="grid gap-6 lg:grid-cols-2">
-                <!-- Pass Rate Trend -->
-                <div class="rounded-lg bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Pass Rate Trend</h3>
-                    <div class="h-64 flex items-end justify-between gap-2">
-                        <div class="flex-1 flex flex-col items-center">
-                            <div class="w-full bg-emerald-500 rounded-t" style="height: 75%"></div>
-                            <span class="mt-2 text-xs text-gray-600">Jan</span>
-                        </div>
-                        <div class="flex-1 flex flex-col items-center">
-                            <div class="w-full bg-emerald-500 rounded-t" style="height: 82%"></div>
-                            <span class="mt-2 text-xs text-gray-600">Feb</span>
-                        </div>
-                        <div class="flex-1 flex flex-col items-center">
-                            <div class="w-full bg-emerald-500 rounded-t" style="height: 68%"></div>
-                            <span class="mt-2 text-xs text-gray-600">Mar</span>
-                        </div>
-                        <div class="flex-1 flex flex-col items-center">
-                            <div class="w-full bg-emerald-500 rounded-t" style="height: 78%"></div>
-                            <span class="mt-2 text-xs text-gray-600">Apr</span>
-                        </div>
-                        <div class="flex-1 flex flex-col items-center">
-                            <div class="w-full bg-emerald-500 rounded-t" style="height: 85%"></div>
-                            <span class="mt-2 text-xs text-gray-600">May</span>
-                        </div>
-                        <div class="flex-1 flex flex-col items-center">
-                            <div class="w-full bg-emerald-500 rounded-t" style="height: 79%"></div>
-                            <span class="mt-2 text-xs text-gray-600">Jun</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Grade Distribution -->
-                <div class="rounded-lg bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Grade Distribution</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-sm font-medium text-gray-700">Grade A</span>
-                                <span class="text-sm font-semibold text-emerald-600">25%</span>
-                            </div>
-                            <div class="h-3 w-full rounded-full bg-gray-200">
-                                <div class="h-3 rounded-full bg-emerald-500" style="width: 25%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-sm font-medium text-gray-700">Grade B</span>
-                                <span class="text-sm font-semibold text-blue-600">35%</span>
-                            </div>
-                            <div class="h-3 w-full rounded-full bg-gray-200">
-                                <div class="h-3 rounded-full bg-blue-500" style="width: 35%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-sm font-medium text-gray-700">Grade C</span>
-                                <span class="text-sm font-semibold text-amber-600">20%</span>
-                            </div>
-                            <div class="h-3 w-full rounded-full bg-gray-200">
-                                <div class="h-3 rounded-full bg-amber-500" style="width: 20%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-sm font-medium text-gray-700">Grade D</span>
-                                <span class="text-sm font-semibold text-orange-600">12%</span>
-                            </div>
-                            <div class="h-3 w-full rounded-full bg-gray-200">
-                                <div class="h-3 rounded-full bg-orange-500" style="width: 12%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-sm font-medium text-gray-700">Grade F</span>
-                                <span class="text-sm font-semibold text-red-600">8%</span>
-                            </div>
-                            <div class="h-3 w-full rounded-full bg-gray-200">
-                                <div class="h-3 rounded-full bg-red-500" style="width: 8%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Reports -->
-            <div class="rounded-lg bg-white shadow-sm overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900">Recent Reports</h3>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Report Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Period</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Generated</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 bg-white">
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
-                                            <svg class="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <p class="font-medium text-gray-900">Monthly Performance Report</p>
-                                            <p class="text-sm text-gray-500">All exams included</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
-                                        Performance
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <p class="text-sm text-gray-900">January 2025</p>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <p class="text-sm text-gray-900">2 hours ago</p>
-                                </td>
-                                <td class="px-6 py-4 text-right">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <button class="rounded-lg p-2 text-gray-600 hover:bg-gray-100 transition-colors" title="View">
-                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                            </svg>
-                                        </button>
-                                        <button class="rounded-lg p-2 text-emerald-600 hover:bg-emerald-50 transition-colors" title="Download">
-                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                                            <svg class="h-5 w-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <p class="font-medium text-gray-900">Candidate Statistics Report</p>
-                                            <p class="text-sm text-gray-500">Form 4 candidates</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-                                        Candidate
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <p class="text-sm text-gray-900">Q4 2024</p>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <p class="text-sm text-gray-900">1 day ago</p>
-                                </td>
-                                <td class="px-6 py-4 text-right">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <button class="rounded-lg p-2 text-gray-600 hover:bg-gray-100 transition-colors">
-                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                            </svg>
-                                        </button>
-                                        <button class="rounded-lg p-2 text-emerald-600 hover:bg-emerald-50 transition-colors">
-                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     </EmasLayout>
 </template>

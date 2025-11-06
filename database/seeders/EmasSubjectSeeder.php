@@ -28,11 +28,11 @@ class EmasSubjectSeeder extends Seeder
             // Arts & Humanities
             ['name' => 'History', 'code' => 'HIST', 'description' => 'History', 'status' => 'active'],
             ['name' => 'Geography', 'code' => 'GEO', 'description' => 'Geography', 'status' => 'active'],
-            ['name' => 'Bible Knowledge', 'code' => 'BK', 'description' => 'Christian Religious Education (CRE)', 'status' => 'active'],
+            ['name' => 'Bible Knowledge', 'code' => 'CRE', 'description' => 'Christian Religious Education (CRE)', 'status' => 'active'],
             ['name' => 'Islamic Knowledge', 'code' => 'IK', 'description' => 'Islamic Religious Education (IRE)', 'status' => 'active'],
             
             // Commerce & Business
-            ['name' => 'Book Keeping', 'code' => 'BK', 'description' => 'Book Keeping', 'status' => 'active'],
+            ['name' => 'Book Keeping', 'code' => 'BKP', 'description' => 'Book Keeping', 'status' => 'active'],
             ['name' => 'Commerce', 'code' => 'COMM', 'description' => 'Commerce', 'status' => 'active'],
             ['name' => 'Accountancy', 'code' => 'ACC', 'description' => 'Accountancy (Advanced Level)', 'status' => 'active'],
             

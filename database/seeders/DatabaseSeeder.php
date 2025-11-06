@@ -18,15 +18,19 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'username' => 'testuser',
-            'email' => 'test@example.com',
-            'phone' => '255700000001',
-            'region' => 'Dar es Salaam',
-            'school_name' => 'Test Secondary School',
-            'school_number' => 'S0001',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'test@example.com'],
+            [
+                'name' => 'Test User',
+                'username' => 'testuser',
+                'phone' => '255700000001',
+                'region' => 'Dar es Salaam',
+                'school_name' => 'Test Secondary School',
+                'school_number' => 'S0001',
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+            ]
+        );
 
         $this->call(StudentSeeder::class);
         $this->call(AdminSeeder::class);
